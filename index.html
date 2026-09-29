@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="google-site-verification" content="mI3WMqzgBgwIshZuNFluEIprZrOnXrDGzecXJjHuqOw" />
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - End Crystal PvP (Mace & Elytra)</title>
+    <title>Donut SMP - End Crystal PvP</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -111,9 +110,16 @@
         /* Action Text Overlay */
         #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
+        /* Settings Options UI */
+        .option-group { display: flex; flex-direction: column; gap: 4px; text-align: left; margin-bottom: 8px; }
+        .option-group label { color: #aaa; font-size: 12px; font-weight: bold; }
+        .option-select, .option-input { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #ffaa00; border-radius: 4px; font-family: inherit; font-size: 13px; }
+        .toggle-btn { padding: 8px; background: #333; color: #ff5555; border: 1px solid #ffaa00; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; }
+        .toggle-btn.active { background: #00aa55; color: #fff; }
+
         /* Start Screen Blocker */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 30; }
-        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; }
+        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; max-height: 90vh; overflow-y: auto; }
         .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .mode-btn:hover { background: #ff3377; }
         #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
@@ -128,7 +134,7 @@
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
-        <div id="action-text">Heavy Mace & No Brother Damage Active!</div>
+        <div id="action-text">AI Steve Armed with Crossbow, Elytra & Fireworks!</div>
 
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -175,7 +181,7 @@
                 </div>
             </div>
 
-            <!-- Hotbar (8 Slots: Sword, Apple, Crystal, Obsidian, Totem, Crossbow, Elytra/Fireworks, Mace) -->
+            <!-- Hotbar (8 Slots) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
                     <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
@@ -194,18 +200,47 @@
         <div id="blocker">
             <div id="instructions">
                 <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
+                
+                <!-- Game Settings Options -->
+                <div style="background: #111; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #333;">
+                    <div class="option-group">
+                        <label>BOT DIFFICULTY (FOR VS AI BOT)</label>
+                        <select id="bot-difficulty-select" class="option-select">
+                            <option value="easy">Easy Mode</option>
+                            <option value="medium" selected>Medium Mode</option>
+                            <option value="hard">Hard Mode</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label>FIELD OF VIEW (FOV)</label>
+                        <select id="fov-select" class="option-select">
+                            <option value="60">60° (Narrow)</option>
+                            <option value="75" selected>75° (Standard)</option>
+                            <option value="90">90° (Quake Pro / Wide)</option>
+                            <option value="110">110° (Ultra Wide)</option>
+                        </select>
+                    </div>
+
+                    <div class="option-group">
+                        <label>FRIENDLY FIRE (DUEL BROTHER)</label>
+                        <div id="friendly-fire-btn" class="toggle-btn">Friendly Fire: OFF (Safe)</div>
+                    </div>
+                </div>
+
                 <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
                 
-                <button class="mode-btn" id="btn-mode-ai">1. PLAY VS STEVE AI BOT</button>
+                <button class="mode-btn" id="btn-mode-ai">1. PLAY VS UPGRADED STEVE AI BOT</button>
+                <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY WITH BROTHER (2P / DUEL)</button>
                 
                 <hr style="margin:10px 0; border:1px solid #444;">
                 
                 <input type="number" id="room-input" placeholder="Enter Room Code (e.g. 1234)" />
-                <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">2. JOIN MULTIPLAYER ROOM</button>
+                <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">3. JOIN MULTIPLAYER ROOM</button>
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>8 Key:</b> Mace (Fall Smash Attack deals massive heavy damage!)</p>
-                    <p><b>Multiplayer PvP:</b> Friendly Fire is DISABLED for your brother!</p>
+                    <p><b>Bot Upgrades:</b> AI Steve uses Crossbow, Elytra Wings & Fireworks!</p>
+                    <p><b>Friendly Fire Rules:</b> Turn ON Friendly Fire to duel your brother! If either turns it off, damage is blocked!</p>
                 </div>
             </div>
         </div>
@@ -217,6 +252,11 @@
         let canJump = false;
         const velocity = new THREE.Vector3();
         let prevTime = performance.now();
+
+        // Settings State
+        let botDifficulty = 'medium';
+        let friendlyFireEnabled = false;
+        let broFriendlyFireEnabled = false;
 
         // Mobile Controls Variables
         let isMobile = false;
@@ -242,12 +282,15 @@
         let gameMode = 'none';
         let peer, peerConn;
         let remotePlayerMesh = null;
+        let broPlayerMesh = null;
         
-        // AI Steve State
-        let aiSteveMesh = null, aiSteveTimer = 0;
+        // AI Steve State (Upgraded)
+        let aiSteveMesh = null, aiSteveTimer = 0, aiSteveFireworkTimer = 0, aiSteveCrossbowTimer = 0;
         let aiSteveHealth = 10;
         let aiSteveTotems = 64;
         let aiSteveHealthBarMesh = null;
+        let aiSteveVerticalVel = 0;
+        let aiSteveIsSmashing = false;
 
         // Held Item Meshes
         let swordMesh, heldTotemMesh, crossbowMesh, maceMesh;
@@ -355,11 +398,42 @@
 
             controls = new THREE.PointerLockControls(camera, document.body);
 
+            // Settings Listeners
+            document.getElementById('bot-difficulty-select').addEventListener('change', (e) => {
+                botDifficulty = e.target.value;
+            });
+
+            document.getElementById('fov-select').addEventListener('change', (e) => {
+                camera.fov = parseFloat(e.target.value);
+                camera.updateProjectionMatrix();
+            });
+
+            const ffBtn = document.getElementById('friendly-fire-btn');
+            ffBtn.addEventListener('click', () => {
+                friendlyFireEnabled = !friendlyFireEnabled;
+                if (friendlyFireEnabled) {
+                    ffBtn.classList.add('active');
+                    ffBtn.innerText = "Friendly Fire: ON (Can Duel)";
+                } else {
+                    ffBtn.classList.remove('active');
+                    ffBtn.innerText = "Friendly Fire: OFF (Safe)";
+                }
+                if (peerConn && peerConn.open) {
+                    peerConn.send({ type: 'ff_toggle', enabled: friendlyFireEnabled });
+                }
+            });
+
             // Mode Selection Handlers
             document.getElementById('btn-mode-ai').addEventListener('click', () => {
                 gameMode = 'ai';
                 startGame();
                 spawnAISteve();
+            });
+
+            document.getElementById('btn-mode-bro').addEventListener('click', () => {
+                gameMode = 'bro';
+                startGame();
+                spawnBrotherPlayer();
             });
 
             document.getElementById('btn-mode-mp').addEventListener('click', () => {
@@ -441,20 +515,74 @@
             }
         }
 
-        /* --- Player Meshes & Overhead Health Bar --- */
-        function createStevePlayerMesh(color = 0x00aaff) {
+        /* --- Player Meshes (Added Mace & Elytra Wings to Bot) --- */
+        function createStevePlayerMesh(color = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
+            
+            // Body
             const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
             const bodyMat = new THREE.MeshStandardMaterial({ color: color });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 0.9;
             steveGroup.add(body);
 
+            // Head
             const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
             const head = new THREE.Mesh(headGeo, headMat);
             head.position.y = 2.0;
             steveGroup.add(head);
+
+            // Elytra Wings (For Bot)
+            if (isBot) {
+                const wingGeo = new THREE.BoxGeometry(0.1, 0.9, 0.4);
+                const wingMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.3 });
+                
+                const leftWing = new THREE.Mesh(wingGeo, wingMat);
+                leftWing.position.set(-0.35, 1.1, -0.25);
+                leftWing.rotation.set(0.2, 0.3, 0.4);
+                steveGroup.add(leftWing);
+
+                const rightWing = new THREE.Mesh(wingGeo, wingMat);
+                rightWing.position.set(0.35, 1.1, -0.25);
+                rightWing.rotation.set(0.2, -0.3, -0.4);
+                steveGroup.add(rightWing);
+
+                // Bot Mace Weapon Model
+                const botMace = new THREE.Group();
+                const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
+                const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
+                const handle = new THREE.Mesh(handleGeo, handleMat);
+                handle.position.y = 0.4;
+                botMace.add(handle);
+
+                const maceHeadGeo = new THREE.BoxGeometry(0.25, 0.3, 0.25);
+                const maceHeadMat = new THREE.MeshStandardMaterial({ color: 0x8899a6, metalness: 0.9, roughness: 0.2 });
+                const maceHead = new THREE.Mesh(maceHeadGeo, maceHeadMat);
+                maceHead.position.y = 0.8;
+                botMace.add(maceHead);
+
+                botMace.position.set(0.5, 0.8, 0.3);
+                botMace.rotation.set(-0.3, 0, -0.2);
+                steveGroup.add(botMace);
+
+                // Bot Crossbow Model
+                const botCrossbow = new THREE.Group();
+                const cbBodyGeo = new THREE.BoxGeometry(0.08, 0.08, 0.6);
+                const cbBodyMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+                const cbBody = new THREE.Mesh(cbBodyGeo, cbBodyMat);
+                botCrossbow.add(cbBody);
+
+                const cbArmGeo = new THREE.BoxGeometry(0.5, 0.06, 0.06);
+                const cbArmMat = new THREE.MeshStandardMaterial({ color: 0x5c2204 });
+                const cbArm = new THREE.Mesh(cbArmGeo, cbArmMat);
+                cbArm.position.z = -0.2;
+                botCrossbow.add(cbArm);
+
+                botCrossbow.position.set(-0.5, 0.8, 0.3);
+                botCrossbow.rotation.set(-0.3, 0, 0.2);
+                steveGroup.add(botCrossbow);
+            }
 
             return steveGroup;
         }
@@ -477,7 +605,7 @@
         }
 
         function spawnAISteve() {
-            aiSteveMesh = createStevePlayerMesh(0x00ffaa);
+            aiSteveMesh = createStevePlayerMesh(0x00ffaa, true);
             aiSteveMesh.position.set(10, 0.5, 10);
             aiSteveMesh.name = "ai_steve";
 
@@ -486,7 +614,20 @@
             aiSteveMesh.add(aiSteveHealthBarMesh);
 
             scene.add(aiSteveMesh);
-            showActionText("AI Steve Bot Joined!");
+            showActionText(`AI Steve Bot Joined (${botDifficulty.toUpperCase()} Mode!)`);
+        }
+
+        function spawnBrotherPlayer() {
+            broPlayerMesh = createStevePlayerMesh(0xff0055, false);
+            broPlayerMesh.position.set(-8, 0.5, -8);
+            broPlayerMesh.name = "brother_player";
+
+            const nameTag = createOverheadHealthBar();
+            nameTag.position.set(0, 2.6, 0);
+            broPlayerMesh.add(nameTag);
+
+            scene.add(broPlayerMesh);
+            showActionText("Brother Player Added!");
         }
 
         function updateSteveHealthBarUI() {
@@ -530,6 +671,26 @@
             updateSteveHealthBarUI();
         }
 
+        /* --- Upgraded Bot Logic: Easy/Medium/Hard + Crossbow/Fireworks/Elytra --- */
+        function shootAICrossbow() {
+            if (!aiSteveMesh) return;
+            playSound('shoot');
+
+            const arrowGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6);
+            const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+
+            const dir = camera.position.clone().sub(aiSteveMesh.position).normalize();
+            arrowMesh.position.copy(aiSteveMesh.position).add(new THREE.Vector3(0, 1.2, 0));
+            arrowMesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+
+            scene.add(arrowMesh);
+
+            const speed = botDifficulty === 'hard' ? 55.0 : botDifficulty === 'medium' ? 38.0 : 25.0;
+            activeArrows.push({ mesh: arrowMesh, dir: dir.multiplyScalar(speed), age: 0, isFromBot: true });
+            showActionText("AI Steve Shot Crossbow!");
+        }
+
         function updateAISteveLogic(delta) {
             if (!aiSteveMesh) return;
 
@@ -538,29 +699,95 @@
             const playerPos = camera.position;
             const dist = aiSteveMesh.position.distanceTo(playerPos);
 
-            if (dist > 3.0) {
-                const dir = playerPos.clone().sub(aiSteveMesh.position).normalize();
-                aiSteveMesh.position.x += dir.x * 4.5 * delta;
-                aiSteveMesh.position.z += dir.z * 4.5 * delta;
-                aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
+            // Difficulty Settings
+            let speedMult = 1.0, hitInterval = 1.2, fireworkCooldown = 5.0, cbInterval = 4.0;
+            if (botDifficulty === 'easy') {
+                speedMult = 0.6; hitInterval = 2.0; fireworkCooldown = 8.0; cbInterval = 6.0;
+            } else if (botDifficulty === 'hard') {
+                speedMult = 1.5; hitInterval = 0.7; fireworkCooldown = 3.0; cbInterval = 2.0;
             }
 
-            aiSteveTimer += delta;
-            if (aiSteveTimer > 2.0) {
-                aiSteveTimer = 0;
-                const bx = Math.round(aiSteveMesh.position.x);
-                const bz = Math.round(aiSteveMesh.position.z);
+            // Crossbow Attack Logic
+            aiSteveCrossbowTimer += delta;
+            if (aiSteveCrossbowTimer > cbInterval && dist > 4.0) {
+                aiSteveCrossbowTimer = 0;
+                shootAICrossbow();
+            }
 
-                placeObsidianBlock(bx, 1, bz);
-                placeEndCrystal(bx, 2, bz);
+            // Fireworks Boost Launching Logic
+            aiSteveFireworkTimer += delta;
+            if (aiSteveFireworkTimer > fireworkCooldown && aiSteveMesh.position.y <= 0.6) {
+                aiSteveFireworkTimer = 0;
+                aiSteveVerticalVel = botDifficulty === 'hard' ? 22.0 : 18.0; 
+                aiSteveIsSmashing = true;
+                playSound('firework');
+                spawnParticleExplosion(aiSteveMesh.position);
+                showActionText("AI STEVE USED FIREWORK BOOST!");
+            }
 
-                setTimeout(() => {
-                    endCrystals.forEach(c => {
-                        if (c.position.distanceTo(aiSteveMesh.position) < 3.0) {
-                            detonateCrystal(c);
+            // Gravity & Vertical Movement
+            if (aiSteveMesh.position.y > 0.5 || aiSteveVerticalVel > 0) {
+                aiSteveVerticalVel -= 25.0 * delta;
+                aiSteveMesh.position.y += aiSteveVerticalVel * delta;
+
+                if (aiSteveMesh.position.y <= 0.5) {
+                    aiSteveMesh.position.y = 0.5;
+                    aiSteveVerticalVel = 0;
+
+                    // Mace Smash Attack Impact on Landing
+                    if (aiSteveIsSmashing) {
+                        aiSteveIsSmashing = false;
+                        playSound('mace');
+                        spawnParticleExplosion(aiSteveMesh.position);
+
+                        if (dist < 4.0) {
+                            const smashDmg = botDifficulty === 'hard' ? 7 : botDifficulty === 'medium' ? 5 : 3;
+                            takeDamage(smashDmg);
+                            showActionText("AI STEVE LANDED A MACE SMASH ATTACK!");
                         }
-                    });
-                }, 800);
+                    }
+                }
+            }
+
+            // Horizontal Pursuit Movement
+            if (dist > 2.5) {
+                const dir = playerPos.clone().sub(aiSteveMesh.position);
+                dir.y = 0;
+                dir.normalize();
+                aiSteveMesh.position.x += dir.x * 5.0 * speedMult * delta;
+                aiSteveMesh.position.z += dir.z * 5.0 * speedMult * delta;
+                aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
+            } else if (dist <= 2.5 && aiSteveMesh.position.y <= 0.6) {
+                // Melee Mace Attack when close
+                aiSteveTimer += delta;
+                if (aiSteveTimer > hitInterval) {
+                    aiSteveTimer = 0;
+                    playSound('mace');
+                    const maceDmg = botDifficulty === 'hard' ? 4 : botDifficulty === 'medium' ? 3 : 2;
+                    takeDamage(maceDmg);
+                    showActionText("AI Steve Hit You with Mace!");
+                }
+            }
+
+            // Crystal PvP Traps
+            if (aiSteveMesh.position.y <= 0.6 && botDifficulty !== 'easy') {
+                aiSteveTimer += delta;
+                if (aiSteveTimer > (botDifficulty === 'hard' ? 1.8 : 2.8)) {
+                    aiSteveTimer = 0;
+                    const bx = Math.round(aiSteveMesh.position.x);
+                    const bz = Math.round(aiSteveMesh.position.z);
+
+                    placeObsidianBlock(bx, 1, bz);
+                    placeEndCrystal(bx, 2, bz);
+
+                    setTimeout(() => {
+                        endCrystals.forEach(c => {
+                            if (c.position.distanceTo(aiSteveMesh.position) < 3.0) {
+                                detonateCrystal(c);
+                            }
+                        });
+                    }, 800);
+                }
             }
         }
 
@@ -587,7 +814,7 @@
                 showActionText("Brother Joined the Match!");
             });
 
-            remotePlayerMesh = createStevePlayerMesh(0xff0055);
+            remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
             remotePlayerMesh.position.set(-10, 0.5, -10);
             scene.add(remotePlayerMesh);
         }
@@ -595,11 +822,21 @@
         function setupPeerEvents(conn) {
             conn.on('data', (data) => {
                 if (data.type === 'pos') {
-                    remotePlayerMesh.position.set(data.x, data.y - 1.5, data.z);
+                    if (remotePlayerMesh) remotePlayerMesh.position.set(data.x, data.y - 1.5, data.z);
                 } else if (data.type === 'obsidian') {
                     placeObsidianBlock(data.x, data.y, data.z);
                 } else if (data.type === 'crystal') {
                     placeEndCrystal(data.x, data.y, data.z);
+                } else if (data.type === 'ff_toggle') {
+                    broFriendlyFireEnabled = data.enabled;
+                    showActionText(`Brother's Friendly Fire: ${broFriendlyFireEnabled ? 'ON' : 'OFF'}`);
+                } else if (data.type === 'hit_me') {
+                    if (friendlyFireEnabled && broFriendlyFireEnabled) {
+                        takeDamage(data.damage || 3);
+                        showActionText("Hit by Brother!");
+                    } else {
+                        showActionText("Brother hit you! (Friendly Fire Off - No Damage)");
+                    }
                 }
             });
         }
@@ -723,7 +960,7 @@
         function spawnDummyTargets() {
             const dummyPositions = [ { x: 5, z: -5 }, { x: -6, z: -8 }, { x: 8, z: 6 } ];
             dummyPositions.forEach(p => {
-                const dummyGroup = createStevePlayerMesh(0x964B00);
+                const dummyGroup = createStevePlayerMesh(0x964B00, false);
                 dummyGroup.position.set(p.x, 0.5, p.z);
                 dummyGroup.name = "dummy";
                 scene.add(dummyGroup);
@@ -1082,12 +1319,28 @@
 
             // Mace Smash Damage Multiplier based on Fall Speed
             const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
+            const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
 
-            // Hit Brother Check (NO DAMAGE DEALT TO BROTHER!)
-            if (remotePlayerMesh) {
-                const broHits = raycaster.intersectObjects(remotePlayerMesh.children, true);
+            // Hit Brother Check (FRIENDLY FIRE TOGGLE LOGIC)
+            if (broPlayerMesh || remotePlayerMesh) {
+                const targetBro = broPlayerMesh || remotePlayerMesh;
+                const broHits = raycaster.intersectObjects(targetBro.children, true);
                 if (broHits.length > 0) {
-                    showActionText("Hit Brother! (Friendly Fire Off - No Damage)");
+                    if (gameMode === 'bro') {
+                        if (friendlyFireEnabled) {
+                            showActionText(`Hit Brother! (-${baseDmg} HP - Friendly Fire ON)`);
+                            spawnParticleExplosion(targetBro.position);
+                        } else {
+                            showActionText("Hit Brother! (Friendly Fire OFF - No Damage)");
+                        }
+                    } else if (gameMode === 'mp') {
+                        if (friendlyFireEnabled && broFriendlyFireEnabled) {
+                            if (peerConn && peerConn.open) peerConn.send({ type: 'hit_me', damage: baseDmg });
+                            showActionText(`Hit Brother! (-${baseDmg} HP)`);
+                        } else {
+                            showActionText("Hit Brother! (Both must turn Friendly Fire ON to duel)");
+                        }
+                    }
                     return;
                 }
             }
@@ -1095,11 +1348,10 @@
             if (aiSteveMesh) {
                 const steveHits = raycaster.intersectObjects(aiSteveMesh.children, true);
                 if (steveHits.length > 0) {
-                    const dmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
-                    damageAISteve(dmg);
+                    damageAISteve(baseDmg);
                     if (currentSlot === 8 && fallDamageBonus > 1.5) {
                         spawnParticleExplosion(aiSteveMesh.position);
-                        showActionText(`HEAVY MACE SMASH! (-${dmg} HP)`);
+                        showActionText(`HEAVY MACE SMASH! (-${baseDmg} HP)`);
                     }
                     return;
                 }
@@ -1332,12 +1584,24 @@
                 arrow.mesh.position.addScaledVector(arrow.dir, delta);
                 arrow.age += delta;
 
-                if (aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.5) {
-                    damageAISteve(4);
-                    spawnParticleExplosion(arrow.mesh.position);
-                    scene.remove(arrow.mesh);
-                    activeArrows.splice(i, 1);
-                    continue;
+                if (arrow.isFromBot) {
+                    if (camera.position.distanceTo(arrow.mesh.position) < 1.5) {
+                        const arrowDmg = botDifficulty === 'hard' ? 5 : botDifficulty === 'medium' ? 3 : 2;
+                        takeDamage(arrowDmg);
+                        showActionText("AI Crossbow Hit You!");
+                        spawnParticleExplosion(arrow.mesh.position);
+                        scene.remove(arrow.mesh);
+                        activeArrows.splice(i, 1);
+                        continue;
+                    }
+                } else {
+                    if (aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.5) {
+                        damageAISteve(4);
+                        spawnParticleExplosion(arrow.mesh.position);
+                        scene.remove(arrow.mesh);
+                        activeArrows.splice(i, 1);
+                        continue;
+                    }
                 }
 
                 if (arrow.age > 2.0 || arrow.mesh.position.y < 0.5) {
