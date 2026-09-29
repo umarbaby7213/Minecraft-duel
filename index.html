@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - End Crystal PvP (Full Inventory)</title>
+    <title>Donut SMP - End Crystal PvP (Crossbow & Elytra)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -127,7 +127,7 @@
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
-        <div id="action-text">Ate Golden Apple! +4 Hearts</div>
+        <div id="action-text">Crossbow & Elytra Ready!</div>
 
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -142,7 +142,7 @@
         <div id="inventory-screen">
             <h3>PLAYER INVENTORY (Press E to Close)</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
-            <p style="font-size: 11px; color: #333; text-align: center;">Click any item to refill current hotbar slot with 64!</p>
+            <p style="font-size: 11px; color: #333; text-align: center;">Click any item to refill hotbar slot to 64!</p>
         </div>
 
         <!-- HUD -->
@@ -174,7 +174,7 @@
                 </div>
             </div>
 
-            <!-- Hotbar (5 Slots) -->
+            <!-- Hotbar (7 Slots: Sword, Apple, Crystal, Obsidian, Totem, Crossbow, Elytra/Fireworks) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
                     <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
@@ -182,6 +182,8 @@
                     <div class="slot" id="slot-3" onclick="selectSlot(3)"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
                     <div class="slot" id="slot-4" onclick="selectSlot(4)"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
                     <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">64</span></div>
+                    <div class="slot" id="slot-6" onclick="selectSlot(6)"><span class="slot-num">6</span>🏹<span class="count-badge" id="arrow-count">64</span></div>
+                    <div class="slot" id="slot-7" onclick="selectSlot(7)"><span class="slot-num">7</span>🚀<span class="count-badge" id="firework-count">64</span></div>
                 </div>
             </div>
         </div>
@@ -200,8 +202,9 @@
                 <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">2. JOIN MULTIPLAYER ROOM</button>
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>PC:</b> Press 'E' to open Full Stacked Inventory!</p>
-                    <p><b>Mobile:</b> Tap 'INV' button to open Inventory GUI!</p>
+                    <p><b>6 Key:</b> Crossbow (Shoots Explosive Arrows!)</p>
+                    <p><b>7 Key:</b> Elytra Wings + Firework Boost (Space to Glider, Right-Click to Rocket)!</p>
+                    <p><b>E Key:</b> Refill Full Stacks in Inventory!</p>
                 </div>
             </div>
         </div>
@@ -229,10 +232,13 @@
         let isInventoryOpen = false;
 
         // Player Item Counts
-        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64 };
+        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64 };
+
+        // Elytra State
+        let isGliding = false;
 
         // Game Mode & Multiplayer
-        let gameMode = 'none'; // 'ai' or 'mp'
+        let gameMode = 'none';
         let peer, peerConn;
         let remotePlayerMesh = null;
         
@@ -243,9 +249,10 @@
         let aiSteveHealthBarMesh = null;
 
         // Held Item Meshes
-        let swordMesh, heldTotemMesh;
+        let swordMesh, heldTotemMesh, crossbowMesh;
 
-        // Interactive Objects & Systems Tracker
+        // Active Projectiles & Systems
+        const activeArrows = [];
         const placeableObjects = [];
         const endCrystals = [];
         const dummyTargets = [];
@@ -269,6 +276,20 @@
                 gain.gain.setValueAtTime(1.0, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
                 osc.start(now); osc.stop(now + 0.6);
+            } else if (type === 'shoot') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
+                gain.gain.setValueAtTime(0.5, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+                osc.start(now); osc.stop(now + 0.15);
+            } else if (type === 'firework') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(1000, now + 0.3);
+                gain.gain.setValueAtTime(0.6, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
             } else if (type === 'eat') {
                 osc.type = 'sine';
                 osc.frequency.setValueAtTime(320, now);
@@ -336,7 +357,7 @@
             document.getElementById('btn-mode-mp').addEventListener('click', () => {
                 const roomCode = document.getElementById('room-input').value.trim();
                 if (!roomCode || roomCode.length < 3) {
-                    alert('Please enter a valid 4-digit code (e.g. 1234)!');
+                    alert('Please enter a valid code (e.g. 1234)!');
                     return;
                 }
                 gameMode = 'mp';
@@ -375,14 +396,13 @@
             const container = document.getElementById('inv-grid-container');
             container.innerHTML = '';
 
-            // Fill 27 Inventory Slots with 64 Stacks of Crystals, Obsidian, Totems, and Apples
             const items = [
                 { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' },
+                { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' },
                 { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' },
+                { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' },
                 { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }
             ];
 
@@ -413,7 +433,7 @@
             }
         }
 
-        /* --- AI Steve Bot Implementation & Overhead Health Bar --- */
+        /* --- AI Steve Bot & Overhead Health Bar --- */
         function createStevePlayerMesh(color = 0x00aaff) {
             const steveGroup = new THREE.Group();
             const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
@@ -433,7 +453,6 @@
 
         function createOverheadHealthBar() {
             const barGroup = new THREE.Group();
-            
             const bgGeo = new THREE.PlaneGeometry(1.4, 0.2);
             const bgMat = new THREE.MeshBasicMaterial({ color: 0x333333, side: THREE.DoubleSide });
             const bg = new THREE.Mesh(bgGeo, bgMat);
@@ -459,7 +478,7 @@
             aiSteveMesh.add(aiSteveHealthBarMesh);
 
             scene.add(aiSteveMesh);
-            showActionText("AI Steve Bot Joined (Filled Inventory)!");
+            showActionText("AI Steve Bot Joined!");
         }
 
         function updateSteveHealthBarUI() {
@@ -705,32 +724,48 @@
         }
 
         function buildHeldItemModels() {
+            // Sword
             swordMesh = new THREE.Group();
             const bladeGeo = new THREE.BoxGeometry(0.08, 0.9, 0.04);
             const bladeMat = new THREE.MeshStandardMaterial({ color: 0x55ffff, metalness: 0.8, roughness: 0.2 });
             const blade = new THREE.Mesh(bladeGeo, bladeMat);
             blade.position.y = 0.45;
             swordMesh.add(blade);
-
             const hiltGeo = new THREE.BoxGeometry(0.3, 0.06, 0.06);
             const hiltMat = new THREE.MeshStandardMaterial({ color: 0x5c2204 });
             const hilt = new THREE.Mesh(hiltGeo, hiltMat);
             hilt.position.y = 0.02;
             swordMesh.add(hilt);
-
             swordMesh.position.set(0.35, -0.35, -0.5);
             swordMesh.rotation.set(-0.2, -0.4, -0.3);
             camera.add(swordMesh);
 
+            // Totem
             heldTotemMesh = new THREE.Group();
             const tBodyGeo = new THREE.BoxGeometry(0.25, 0.35, 0.15);
             const tBodyMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.5 });
             const tBody = new THREE.Mesh(tBodyGeo, tBodyMat);
             heldTotemMesh.add(tBody);
-
             heldTotemMesh.position.set(0.35, -0.35, -0.5);
             heldTotemMesh.visible = false;
             camera.add(heldTotemMesh);
+
+            // Crossbow Model
+            crossbowMesh = new THREE.Group();
+            const cbBodyGeo = new THREE.BoxGeometry(0.08, 0.08, 0.6);
+            const cbBodyMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+            const cbBody = new THREE.Mesh(cbBodyGeo, cbBodyMat);
+            crossbowMesh.add(cbBody);
+
+            const cbArmGeo = new THREE.BoxGeometry(0.5, 0.06, 0.06);
+            const cbArmMat = new THREE.MeshStandardMaterial({ color: 0x5c2204 });
+            const cbArm = new THREE.Mesh(cbArmGeo, cbArmMat);
+            cbArm.position.z = -0.2;
+            crossbowMesh.add(cbArm);
+
+            crossbowMesh.position.set(0.3, -0.3, -0.4);
+            crossbowMesh.visible = false;
+            camera.add(crossbowMesh);
         }
 
         function createEndCrystalMesh() {
@@ -779,13 +814,23 @@
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveLeft = true; break;
                     case 'KeyD': moveRight = true; break;
-                    case 'Space': if (canJump) { velocity.y += 11.0; canJump = false; } break;
+                    case 'Space': 
+                        if (canJump) { 
+                            velocity.y += 11.0; 
+                            canJump = false; 
+                        } else if (currentSlot === 7 && !isGliding && controls.getObject().position.y > 3.0) {
+                            isGliding = true;
+                            showActionText("Elytra Gliding Activated!");
+                        }
+                        break;
                     case 'KeyE': toggleInventory(); break;
                     case 'Digit1': selectSlot(1); break;
                     case 'Digit2': selectSlot(2); break;
                     case 'Digit3': selectSlot(3); break;
                     case 'Digit4': selectSlot(4); break;
                     case 'Digit5': selectSlot(5); break;
+                    case 'Digit6': selectSlot(6); break;
+                    case 'Digit7': selectSlot(7); break;
                 }
             });
 
@@ -799,8 +844,8 @@
             });
 
             document.addEventListener('wheel', (e) => {
-                if (e.deltaY > 0) selectSlot(currentSlot % 5 + 1);
-                else selectSlot((currentSlot - 2 + 5) % 5 + 1);
+                if (e.deltaY > 0) selectSlot(currentSlot % 7 + 1);
+                else selectSlot((currentSlot - 2 + 7) % 7 + 1);
             });
         }
 
@@ -884,7 +929,13 @@
 
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                if (canJump) { velocity.y += 11.0; canJump = false; }
+                if (canJump) { 
+                    velocity.y += 11.0; 
+                    canJump = false; 
+                } else if (currentSlot === 7 && !isGliding) {
+                    isGliding = true;
+                    showActionText("Elytra Gliding!");
+                }
             });
 
             document.getElementById('btn-hit').addEventListener('touchstart', (e) => {
@@ -900,14 +951,17 @@
 
         function selectSlot(slotNum) {
             currentSlot = slotNum;
-            for (let i = 1; i <= 5; i++) {
+            for (let i = 1; i <= 7; i++) {
                 const el = document.getElementById(`slot-${i}`);
-                if (i === slotNum) el.classList.add('active');
-                else el.classList.remove('active');
+                if (el) {
+                    if (i === slotNum) el.classList.add('active');
+                    else el.classList.remove('active');
+                }
             }
 
             swordMesh.visible = (currentSlot === 1);
             heldTotemMesh.visible = (currentSlot === 5);
+            crossbowMesh.visible = (currentSlot === 6);
         }
 
         function setupMouseInteraction() {
@@ -929,8 +983,52 @@
             }, 120);
         }
 
+        function shootCrossbow() {
+            if (counts.arrow <= 0) return;
+            counts.arrow--;
+            document.getElementById('arrow-count').innerText = counts.arrow;
+
+            playSound('shoot');
+
+            const arrowGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6);
+            const arrowMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+            const arrowMesh = new THREE.Mesh(arrowGeo, arrowMat);
+
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+
+            arrowMesh.position.copy(camera.position).add(dir.clone().multiplyScalar(0.8));
+            arrowMesh.quaternion.copy(camera.quaternion);
+            arrowMesh.rotateX(Math.PI / 2);
+
+            scene.add(arrowMesh);
+
+            activeArrows.push({ mesh: arrowMesh, dir: dir.clone().multiplyScalar(45.0), age: 0 });
+            showActionText("Shot Crossbow Rocket Arrow!");
+        }
+
+        function useFireworkBoost() {
+            if (counts.firework <= 0) return;
+            counts.firework--;
+            document.getElementById('firework-count').innerText = counts.firework;
+
+            playSound('firework');
+
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+
+            velocity.x += dir.x * 25.0;
+            velocity.y += dir.y * 20.0 + 5.0;
+            velocity.z += dir.z * 25.0;
+
+            isGliding = true;
+            spawnParticleExplosion(camera.position);
+            showActionText("FIREWORK BOOST LAUNCH!");
+        }
+
         function handleLeftClick() {
             if (currentSlot === 1) swingSwordAnimation();
+            else if (currentSlot === 6) { shootCrossbow(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -961,6 +1059,7 @@
 
         function handleRightClick() {
             if (currentSlot === 2) { eatGoldenApple(); return; }
+            if (currentSlot === 7) { useFireworkBoost(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             const intersects = raycaster.intersectObjects(placeableObjects, false);
@@ -1137,9 +1236,15 @@
             prevTime = time;
 
             if ((controls.isLocked || isMobile) && !isInventoryOpen) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-                velocity.y -= 25.0 * delta;
+                velocity.x -= velocity.x * (isGliding ? 2.0 : 10.0) * delta;
+                velocity.z -= velocity.z * (isGliding ? 2.0 : 10.0) * delta;
+                
+                // Elytra Physics
+                if (isGliding) {
+                    velocity.y -= 4.0 * delta; // Slow fall during flight
+                } else {
+                    velocity.y -= 25.0 * delta; // Regular gravity
+                }
 
                 const inputDir = new THREE.Vector3(
                     Number(moveRight) - Number(moveLeft),
@@ -1158,10 +1263,33 @@
                     velocity.y = 0;
                     controls.getObject().position.y = 2.5;
                     canJump = true;
+                    isGliding = false;
                 }
 
                 if (gameMode === 'mp') broadcastPlayerPos();
                 if (gameMode === 'ai') updateAISteveLogic(delta);
+            }
+
+            // Update Active Crossbow Arrows
+            for (let i = activeArrows.length - 1; i >= 0; i--) {
+                const arrow = activeArrows[i];
+                arrow.mesh.position.addScaledVector(arrow.dir, delta);
+                arrow.age += delta;
+
+                // Check collision with AI Steve or end crystals
+                if (aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.5) {
+                    damageAISteve(4);
+                    spawnParticleExplosion(arrow.mesh.position);
+                    scene.remove(arrow.mesh);
+                    activeArrows.splice(i, 1);
+                    continue;
+                }
+
+                if (arrow.age > 2.0 || arrow.mesh.position.y < 0.5) {
+                    spawnParticleExplosion(arrow.mesh.position);
+                    scene.remove(arrow.mesh);
+                    activeArrows.splice(i, 1);
+                }
             }
 
             endCrystals.forEach(c => {
