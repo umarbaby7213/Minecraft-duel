@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - End Crystal PvP (Crossbow & Elytra)</title>
+    <title>Donut SMP - End Crystal PvP (Mace & Elytra)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -127,7 +127,7 @@
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
-        <div id="action-text">Crossbow & Elytra Ready!</div>
+        <div id="action-text">Heavy Mace & No Brother Damage Active!</div>
 
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -174,7 +174,7 @@
                 </div>
             </div>
 
-            <!-- Hotbar (7 Slots: Sword, Apple, Crystal, Obsidian, Totem, Crossbow, Elytra/Fireworks) -->
+            <!-- Hotbar (8 Slots: Sword, Apple, Crystal, Obsidian, Totem, Crossbow, Elytra/Fireworks, Mace) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
                     <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
@@ -184,6 +184,7 @@
                     <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">64</span></div>
                     <div class="slot" id="slot-6" onclick="selectSlot(6)"><span class="slot-num">6</span>🏹<span class="count-badge" id="arrow-count">64</span></div>
                     <div class="slot" id="slot-7" onclick="selectSlot(7)"><span class="slot-num">7</span>🚀<span class="count-badge" id="firework-count">64</span></div>
+                    <div class="slot" id="slot-8" onclick="selectSlot(8)"><span class="slot-num">8</span>🔨<span class="count-badge" id="mace-count">64</span></div>
                 </div>
             </div>
         </div>
@@ -202,9 +203,8 @@
                 <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">2. JOIN MULTIPLAYER ROOM</button>
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>6 Key:</b> Crossbow (Shoots Explosive Arrows!)</p>
-                    <p><b>7 Key:</b> Elytra Wings + Firework Boost (Space to Glider, Right-Click to Rocket)!</p>
-                    <p><b>E Key:</b> Refill Full Stacks in Inventory!</p>
+                    <p><b>8 Key:</b> Mace (Fall Smash Attack deals massive heavy damage!)</p>
+                    <p><b>Multiplayer PvP:</b> Friendly Fire is DISABLED for your brother!</p>
                 </div>
             </div>
         </div>
@@ -232,7 +232,7 @@
         let isInventoryOpen = false;
 
         // Player Item Counts
-        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64 };
+        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64, mace: 64 };
 
         // Elytra State
         let isGliding = false;
@@ -249,7 +249,7 @@
         let aiSteveHealthBarMesh = null;
 
         // Held Item Meshes
-        let swordMesh, heldTotemMesh, crossbowMesh;
+        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh;
 
         // Active Projectiles & Systems
         const activeArrows = [];
@@ -276,6 +276,13 @@
                 gain.gain.setValueAtTime(1.0, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
                 osc.start(now); osc.stop(now + 0.6);
+            } else if (type === 'mace') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+                gain.gain.setValueAtTime(0.9, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.start(now); osc.stop(now + 0.4);
             } else if (type === 'shoot') {
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(600, now);
@@ -397,13 +404,13 @@
             container.innerHTML = '';
 
             const items = [
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' },
+                { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' },
+                { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' },
+                { icon: '🚀', type: 'firework' }, { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' },
                 { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' },
-                { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }
+                { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' },
+                { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }
             ];
 
             items.forEach(item => {
@@ -433,7 +440,7 @@
             }
         }
 
-        /* --- AI Steve Bot & Overhead Health Bar --- */
+        /* --- Player Meshes & Overhead Health Bar --- */
         function createStevePlayerMesh(color = 0x00aaff) {
             const steveGroup = new THREE.Group();
             const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
@@ -766,6 +773,25 @@
             crossbowMesh.position.set(0.3, -0.3, -0.4);
             crossbowMesh.visible = false;
             camera.add(crossbowMesh);
+
+            // Heavy Mace Model
+            maceMesh = new THREE.Group();
+            const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
+            const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
+            const handle = new THREE.Mesh(handleGeo, handleMat);
+            handle.position.y = 0.4;
+            maceMesh.add(handle);
+
+            const maceHeadGeo = new THREE.BoxGeometry(0.25, 0.3, 0.25);
+            const maceHeadMat = new THREE.MeshStandardMaterial({ color: 0x8899a6, metalness: 0.9, roughness: 0.2 });
+            const maceHead = new THREE.Mesh(maceHeadGeo, maceHeadMat);
+            maceHead.position.y = 0.8;
+            maceMesh.add(maceHead);
+
+            maceMesh.position.set(0.35, -0.35, -0.5);
+            maceMesh.rotation.set(-0.2, -0.4, -0.3);
+            maceMesh.visible = false;
+            camera.add(maceMesh);
         }
 
         function createEndCrystalMesh() {
@@ -831,6 +857,7 @@
                     case 'Digit5': selectSlot(5); break;
                     case 'Digit6': selectSlot(6); break;
                     case 'Digit7': selectSlot(7); break;
+                    case 'Digit8': selectSlot(8); break;
                 }
             });
 
@@ -844,8 +871,8 @@
             });
 
             document.addEventListener('wheel', (e) => {
-                if (e.deltaY > 0) selectSlot(currentSlot % 7 + 1);
-                else selectSlot((currentSlot - 2 + 7) % 7 + 1);
+                if (e.deltaY > 0) selectSlot(currentSlot % 8 + 1);
+                else selectSlot((currentSlot - 2 + 8) % 8 + 1);
             });
         }
 
@@ -951,7 +978,7 @@
 
         function selectSlot(slotNum) {
             currentSlot = slotNum;
-            for (let i = 1; i <= 7; i++) {
+            for (let i = 1; i <= 8; i++) {
                 const el = document.getElementById(`slot-${i}`);
                 if (el) {
                     if (i === slotNum) el.classList.add('active');
@@ -962,6 +989,7 @@
             swordMesh.visible = (currentSlot === 1);
             heldTotemMesh.visible = (currentSlot === 5);
             crossbowMesh.visible = (currentSlot === 6);
+            maceMesh.visible = (currentSlot === 8);
         }
 
         function setupMouseInteraction() {
@@ -981,6 +1009,16 @@
                 swordMesh.rotation.set(-0.2, -0.4, -0.3);
                 swordMesh.position.set(0.35, -0.35, -0.5);
             }, 120);
+        }
+
+        function swingMaceAnimation() {
+            playSound('mace');
+            maceMesh.rotation.x -= 0.9;
+            maceMesh.position.z -= 0.2;
+            setTimeout(() => {
+                maceMesh.rotation.set(-0.2, -0.4, -0.3);
+                maceMesh.position.set(0.35, -0.35, -0.5);
+            }, 150);
         }
 
         function shootCrossbow() {
@@ -1029,6 +1067,7 @@
         function handleLeftClick() {
             if (currentSlot === 1) swingSwordAnimation();
             else if (currentSlot === 6) { shootCrossbow(); return; }
+            else if (currentSlot === 8) swingMaceAnimation();
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -1040,10 +1079,27 @@
                 return;
             }
 
+            // Mace Smash Damage Multiplier based on Fall Speed
+            const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
+
+            // Hit Brother Check (NO DAMAGE DEALT TO BROTHER!)
+            if (remotePlayerMesh) {
+                const broHits = raycaster.intersectObjects(remotePlayerMesh.children, true);
+                if (broHits.length > 0) {
+                    showActionText("Hit Brother! (Friendly Fire Off - No Damage)");
+                    return;
+                }
+            }
+
             if (aiSteveMesh) {
                 const steveHits = raycaster.intersectObjects(aiSteveMesh.children, true);
                 if (steveHits.length > 0) {
-                    damageAISteve(3);
+                    const dmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
+                    damageAISteve(dmg);
+                    if (currentSlot === 8 && fallDamageBonus > 1.5) {
+                        spawnParticleExplosion(aiSteveMesh.position);
+                        showActionText(`HEAVY MACE SMASH! (-${dmg} HP)`);
+                    }
                     return;
                 }
             }
@@ -1239,11 +1295,10 @@
                 velocity.x -= velocity.x * (isGliding ? 2.0 : 10.0) * delta;
                 velocity.z -= velocity.z * (isGliding ? 2.0 : 10.0) * delta;
                 
-                // Elytra Physics
                 if (isGliding) {
-                    velocity.y -= 4.0 * delta; // Slow fall during flight
+                    velocity.y -= 4.0 * delta;
                 } else {
-                    velocity.y -= 25.0 * delta; // Regular gravity
+                    velocity.y -= 25.0 * delta;
                 }
 
                 const inputDir = new THREE.Vector3(
@@ -1276,7 +1331,6 @@
                 arrow.mesh.position.addScaledVector(arrow.dir, delta);
                 arrow.age += delta;
 
-                // Check collision with AI Steve or end crystals
                 if (aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.5) {
                     damageAISteve(4);
                     spawnParticleExplosion(arrow.mesh.position);
