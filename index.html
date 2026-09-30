@@ -121,10 +121,6 @@
         .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .mode-btn:hover { background: #ff3377; }
         #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
-        
-        /* Multiplayer Buttons Group */
-        .mp-btn-container { display: flex; gap: 10px; width: 100%; }
-        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -228,18 +224,15 @@
                 <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
                 
                 <button class="mode-btn" id="btn-mode-ai">1. PLAY VS UPGRADED STEVE AI BOT</button>
-                <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY ON SINGLE DEVICE (2P DUEL)</button>
+                <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY WITH BROTHER (2P / DUEL)</button>
                 
                 <hr style="margin:10px 0; border:1px solid #444;">
                 
                 <input type="number" id="room-input" placeholder="Enter Room Code (e.g. 1234)" />
-                <div class="mp-btn-container">
-                    <button class="mp-btn" id="btn-host-mp" style="background:#00aa55;">HOST ROOM</button>
-                    <button class="mp-btn" id="btn-join-mp" style="background:#0077ff;">JOIN ROOM</button>
-                </div>
+                <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">3. JOIN MULTIPLAYER ROOM</button>
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>Multiplayer Tip:</b> Device 1 clicks <b>HOST ROOM</b>. Device 2 enters same code and clicks <b>JOIN ROOM</b>!</p>
+                    <p><b>Bot Upgrades:</b> AI Steve uses Crossbow, Elytra Wings & Fireworks!</p>
                 </div>
             </div>
         </div>
@@ -418,27 +411,15 @@
                 spawnBrotherPlayer();
             });
 
-            // FIXED MULTIPLAYER SELECTION (HOST / JOIN TOGGLE)
-            document.getElementById('btn-host-mp').addEventListener('click', () => {
+            document.getElementById('btn-mode-mp').addEventListener('click', () => {
                 const roomCode = document.getElementById('room-input').value.trim();
                 if (!roomCode || roomCode.length < 3) {
-                    alert('Please enter a valid room code (e.g. 1234)!');
+                    alert('Please enter a valid code (e.g. 1234)!');
                     return;
                 }
                 gameMode = 'mp';
                 startGame();
-                initMultiplayer(roomCode, true); // Host True
-            });
-
-            document.getElementById('btn-join-mp').addEventListener('click', () => {
-                const roomCode = document.getElementById('room-input').value.trim();
-                if (!roomCode || roomCode.length < 3) {
-                    alert('Please enter a valid room code (e.g. 1234)!');
-                    return;
-                }
-                gameMode = 'mp';
-                startGame();
-                initMultiplayer(roomCode, false); // Host False
+                initMultiplayer(roomCode);
             });
 
             scene.add(controls.getObject());
@@ -665,7 +646,7 @@
             updateSteveHealthBarUI();
         }
 
-        /* --- Upgraded Bot Logic --- */
+        /* --- Upgraded Bot Logic: Easy/Medium/Hard + Crossbow/Fireworks/Elytra --- */
         function shootAICrossbow() {
             if (!aiSteveMesh) return;
             playSound('shoot');
@@ -785,51 +766,44 @@
             }
         }
 
-        /* --- PeerJS Device-to-Device Room Code Multiplayer (FIXED) --- */
-        function initMultiplayer(roomCode, isHost) {
-            const hostID = "donut-smp-room-" + roomCode;
+        /* --- PeerJS Device-to-Device Room Code Multiplayer --- */
+        function initMultiplayer(roomCode) {
+            const hostID = "donut-smp-" + roomCode + "-host";
 
+            // Spawn local remote mesh visually for opponent
             remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
             remotePlayerMesh.position.set(-10, 0.5, -10);
             scene.add(remotePlayerMesh);
 
-            if (isHost) {
-                peer = new Peer(hostID);
-                showActionText("Hosting Room Code: " + roomCode + " (Waiting for brother...)");
+            // Attempt to connect as Host first
+            peer = new Peer(hostID);
 
-                peer.on('open', () => {
-                    console.log("Host registered ID:", hostID);
-                });
+            peer.on('open', () => {
+                showActionText("Room Created! Waiting for 2nd device (Code: " + roomCode + ")...");
+            });
 
-                peer.on('connection', (conn) => {
-                    peerConn = conn;
-                    setupPeerEvents(peerConn);
-                    showActionText("Brother Joined the Match!");
-                });
+            peer.on('connection', (conn) => {
+                peerConn = conn;
+                setupPeerEvents(peerConn);
+                showActionText("2nd Device Joined! PvP Started!");
+            });
 
-                peer.on('error', (err) => {
-                    alert("Error hosting: Room Code might already be in use!");
-                });
-            } else {
-                peer = new Peer(); // Client gets automatic random ID
-                showActionText("Connecting to Room Code: " + roomCode + "...");
-
-                peer.on('open', () => {
-                    peerConn = peer.connect(hostID);
-                    setupPeerEvents(peerConn);
-                });
-
-                peer.on('error', (err) => {
-                    alert("Could not connect! Make sure your brother clicked HOST ROOM first with Code: " + roomCode);
-                });
-            }
+            // If Host ID is taken, automatically act as Joiner (Client)
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    peer = new Peer(); // Auto-assign unique ID
+                    peer.on('open', () => {
+                        peerConn = peer.connect(hostID);
+                        setupPeerEvents(peerConn);
+                        showActionText("Joined Device 1! Connected to Code " + roomCode);
+                    });
+                } else {
+                    showActionText("Multiplayer Error: " + err.type);
+                }
+            });
         }
 
         function setupPeerEvents(conn) {
-            conn.on('open', () => {
-                showActionText("Connected! Ready to Fight!");
-            });
-
             conn.on('data', (data) => {
                 if (data.type === 'pos') {
                     if (remotePlayerMesh) remotePlayerMesh.position.set(data.x, data.y - 1.5, data.z);
@@ -839,7 +813,8 @@
                     placeEndCrystal(data.x, data.y, data.z);
                 } else if (data.type === 'hit_me') {
                     takeDamage(data.damage || 3);
-                    showActionText("Hit by Brother!");
+                    showActionText("Hit by 2nd Device! (-" + (data.damage || 3) + " HP)");
+                    spawnParticleExplosion(camera.position);
                 }
             });
         }
@@ -1324,7 +1299,7 @@
             const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
             const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
 
-            // Hit Brother Check
+            // Hit Player Check (Brother Mode / PeerJS Device Mode)
             if (broPlayerMesh || remotePlayerMesh) {
                 const targetBro = broPlayerMesh || remotePlayerMesh;
                 const broHits = raycaster.intersectObjects(targetBro.children, true);
@@ -1333,8 +1308,11 @@
                         showActionText(`Hit Brother! (-${baseDmg} HP)`);
                         spawnParticleExplosion(targetBro.position);
                     } else if (gameMode === 'mp') {
-                        if (peerConn && peerConn.open) peerConn.send({ type: 'hit_me', damage: baseDmg });
-                        showActionText(`Hit Brother! (-${baseDmg} HP)`);
+                        if (peerConn && peerConn.open) {
+                            peerConn.send({ type: 'hit_me', damage: baseDmg });
+                        }
+                        showActionText(`Hit 2nd Device Player! (-${baseDmg} HP)`);
+                        spawnParticleExplosion(targetBro.position);
                     }
                     return;
                 }
