@@ -121,6 +121,10 @@
         .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .mode-btn:hover { background: #ff3377; }
         #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
+        
+        /* Multiplayer Buttons Group */
+        .mp-btn-container { display: flex; gap: 10px; width: 100%; }
+        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -224,15 +228,17 @@
                 <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
                 
                 <button class="mode-btn" id="btn-mode-ai">1. PLAY VS UPGRADED STEVE AI BOT</button>
-                <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY WITH BROTHER (2P / DUEL)</button>
+                <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY ON SINGLE DEVICE (2P DUEL)</button>
                 
                 <hr style="margin:10px 0; border:1px solid #444;">
                 
                 <input type="number" id="room-input" placeholder="Enter Room Code (e.g. 1234)" />
-                <button class="mode-btn" id="btn-mode-mp" style="background:#00aa55;">3. JOIN MULTIPLAYER ROOM</button>
+                <div class="mp-btn-container">
+                    <button class="mp-btn" id="btn-join-mp" style="background:#0077ff; width:100%;">JOIN ROOM</button>
+                </div>
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>Bot Upgrades:</b> AI Steve uses Crossbow, Elytra Wings & Fireworks!</p>
+                    <p><b>Multiplayer Tip:</b> Enter the same Room Code on both devices and click <b>JOIN ROOM</b> to connect!</p>
                 </div>
             </div>
         </div>
@@ -273,6 +279,9 @@
         let peer, peerConn;
         let remotePlayerMesh = null;
         let broPlayerMesh = null;
+        let remotePlayerHealth = 10;
+        let remotePlayerTotems = 64;
+        let remotePlayerHealthBarMesh = null;
         
         // AI Steve State (Upgraded)
         let aiSteveMesh = null, aiSteveTimer = 0, aiSteveFireworkTimer = 0, aiSteveCrossbowTimer = 0;
@@ -411,10 +420,11 @@
                 spawnBrotherPlayer();
             });
 
-            document.getElementById('btn-mode-mp').addEventListener('click', () => {
+            // MULTIPLAYER JOIN ROOM BUTTON WITH FIXED MATCHMAKING
+            document.getElementById('btn-join-mp').addEventListener('click', () => {
                 const roomCode = document.getElementById('room-input').value.trim();
-                if (!roomCode || roomCode.length < 3) {
-                    alert('Please enter a valid code (e.g. 1234)!');
+                if (!roomCode || roomCode.length < 2) {
+                    alert('Please enter a valid room code (e.g. 1234)!');
                     return;
                 }
                 gameMode = 'mp';
@@ -494,21 +504,18 @@
         function createStevePlayerMesh(color = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
             
-            // Body
             const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
             const bodyMat = new THREE.MeshStandardMaterial({ color: color });
             const body = new THREE.Mesh(bodyGeo, bodyMat);
             body.position.y = 0.9;
             steveGroup.add(body);
 
-            // Head
             const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
             const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
             const head = new THREE.Mesh(headGeo, headMat);
             head.position.y = 2.0;
             steveGroup.add(head);
 
-            // Elytra Wings (For Bot)
             if (isBot) {
                 const wingGeo = new THREE.BoxGeometry(0.1, 0.9, 0.4);
                 const wingMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.3 });
@@ -523,7 +530,6 @@
                 rightWing.rotation.set(0.2, -0.3, -0.4);
                 steveGroup.add(rightWing);
 
-                // Bot Mace Weapon Model
                 const botMace = new THREE.Group();
                 const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
                 const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
@@ -540,23 +546,6 @@
                 botMace.position.set(0.5, 0.8, 0.3);
                 botMace.rotation.set(-0.3, 0, -0.2);
                 steveGroup.add(botMace);
-
-                // Bot Crossbow Model
-                const botCrossbow = new THREE.Group();
-                const cbBodyGeo = new THREE.BoxGeometry(0.08, 0.08, 0.6);
-                const cbBodyMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-                const cbBody = new THREE.Mesh(cbBodyGeo, cbBodyMat);
-                botCrossbow.add(cbBody);
-
-                const cbArmGeo = new THREE.BoxGeometry(0.5, 0.06, 0.06);
-                const cbArmMat = new THREE.MeshStandardMaterial({ color: 0x5c2204 });
-                const cbArm = new THREE.Mesh(cbArmGeo, cbArmMat);
-                cbArm.position.z = -0.2;
-                botCrossbow.add(cbArm);
-
-                botCrossbow.position.set(-0.5, 0.8, 0.3);
-                botCrossbow.rotation.set(-0.3, 0, 0.2);
-                steveGroup.add(botCrossbow);
             }
 
             return steveGroup;
@@ -611,10 +600,34 @@
             const healthPct = Math.max(0, aiSteveHealth / maxHealth);
             fg.scale.x = healthPct;
             fg.position.x = (healthPct - 1) * 0.68;
+        }
 
-            if (healthPct > 0.5) fg.material.color.setHex(0x00ff00);
-            else if (healthPct > 0.25) fg.material.color.setHex(0xffaa00);
-            else fg.material.color.setHex(0xff0000);
+        function updateRemoteHealthBarUI() {
+            if (!remotePlayerHealthBarMesh) return;
+            const fg = remotePlayerHealthBarMesh.userData.fgMesh;
+            const healthPct = Math.max(0, remotePlayerHealth / maxHealth);
+            fg.scale.x = healthPct;
+            fg.position.x = (healthPct - 1) * 0.68;
+        }
+
+        function damageRemotePlayer(amount) {
+            if (!remotePlayerMesh) return;
+            remotePlayerHealth -= amount;
+
+            if (remotePlayerHealth <= 0) {
+                if (remotePlayerTotems > 0) {
+                    remotePlayerTotems--;
+                    remotePlayerHealth = maxHealth;
+                    playSound('totem');
+                    showActionText(`ENEMY POPPED A TOTEM! (${remotePlayerTotems} left)`);
+                } else {
+                    playSound('explode');
+                    showActionText("YOU KILLED THE ENEMY!");
+                    remotePlayerHealth = maxHealth;
+                    remotePlayerTotems = 64;
+                }
+            }
+            updateRemoteHealthBarUI();
         }
 
         function damageAISteve(amount) {
@@ -646,7 +659,6 @@
             updateSteveHealthBarUI();
         }
 
-        /* --- Upgraded Bot Logic: Easy/Medium/Hard + Crossbow/Fireworks/Elytra --- */
         function shootAICrossbow() {
             if (!aiSteveMesh) return;
             playSound('shoot');
@@ -668,13 +680,11 @@
 
         function updateAISteveLogic(delta) {
             if (!aiSteveMesh) return;
-
             if (aiSteveHealthBarMesh) aiSteveHealthBarMesh.lookAt(camera.position);
 
             const playerPos = camera.position;
             const dist = aiSteveMesh.position.distanceTo(playerPos);
 
-            // Difficulty Settings
             let speedMult = 1.0, hitInterval = 1.2, fireworkCooldown = 5.0, cbInterval = 4.0;
             if (botDifficulty === 'easy') {
                 speedMult = 0.6; hitInterval = 2.0; fireworkCooldown = 8.0; cbInterval = 6.0;
@@ -682,14 +692,12 @@
                 speedMult = 1.5; hitInterval = 0.7; fireworkCooldown = 3.0; cbInterval = 2.0;
             }
 
-            // Crossbow Attack Logic
             aiSteveCrossbowTimer += delta;
             if (aiSteveCrossbowTimer > cbInterval && dist > 4.0) {
                 aiSteveCrossbowTimer = 0;
                 shootAICrossbow();
             }
 
-            // Fireworks Boost Launching Logic
             aiSteveFireworkTimer += delta;
             if (aiSteveFireworkTimer > fireworkCooldown && aiSteveMesh.position.y <= 0.6) {
                 aiSteveFireworkTimer = 0;
@@ -700,7 +708,6 @@
                 showActionText("AI STEVE USED FIREWORK BOOST!");
             }
 
-            // Gravity & Vertical Movement
             if (aiSteveMesh.position.y > 0.5 || aiSteveVerticalVel > 0) {
                 aiSteveVerticalVel -= 25.0 * delta;
                 aiSteveMesh.position.y += aiSteveVerticalVel * delta;
@@ -709,7 +716,6 @@
                     aiSteveMesh.position.y = 0.5;
                     aiSteveVerticalVel = 0;
 
-                    // Mace Smash Attack Impact on Landing
                     if (aiSteveIsSmashing) {
                         aiSteveIsSmashing = false;
                         playSound('mace');
@@ -724,7 +730,6 @@
                 }
             }
 
-            // Horizontal Pursuit Movement
             if (dist > 2.5) {
                 const dir = playerPos.clone().sub(aiSteveMesh.position);
                 dir.y = 0;
@@ -733,7 +738,6 @@
                 aiSteveMesh.position.z += dir.z * 5.0 * speedMult * delta;
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
             } else if (dist <= 2.5 && aiSteveMesh.position.y <= 0.6) {
-                // Melee Mace Attack when close
                 aiSteveTimer += delta;
                 if (aiSteveTimer > hitInterval) {
                     aiSteveTimer = 0;
@@ -743,67 +747,79 @@
                     showActionText("AI Steve Hit You with Mace!");
                 }
             }
-
-            // Crystal PvP Traps
-            if (aiSteveMesh.position.y <= 0.6 && botDifficulty !== 'easy') {
-                aiSteveTimer += delta;
-                if (aiSteveTimer > (botDifficulty === 'hard' ? 1.8 : 2.8)) {
-                    aiSteveTimer = 0;
-                    const bx = Math.round(aiSteveMesh.position.x);
-                    const bz = Math.round(aiSteveMesh.position.z);
-
-                    placeObsidianBlock(bx, 1, bz);
-                    placeEndCrystal(bx, 2, bz);
-
-                    setTimeout(() => {
-                        endCrystals.forEach(c => {
-                            if (c.position.distanceTo(aiSteveMesh.position) < 3.0) {
-                                detonateCrystal(c);
-                            }
-                        });
-                    }, 800);
-                }
-            }
         }
 
-        /* --- PeerJS Device-to-Device Room Code Multiplayer --- */
+        /* --- FIXED PEERJS MULTIPLAYER HOST & JOIN MATCHMAKING --- */
         function initMultiplayer(roomCode) {
-            const hostID = "donut-smp-" + roomCode + "-host";
+            const fullRoomID = "donut-smp-match-" + roomCode;
 
-            // Spawn local remote mesh visually for opponent
             remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
             remotePlayerMesh.position.set(-10, 0.5, -10);
+            
+            remotePlayerHealthBarMesh = createOverheadHealthBar();
+            remotePlayerHealthBarMesh.position.set(0, 2.6, 0);
+            remotePlayerMesh.add(remotePlayerHealthBarMesh);
             scene.add(remotePlayerMesh);
 
-            // Attempt to connect as Host first
-            peer = new Peer(hostID);
+            showActionText("Connecting to Room Code: " + roomCode + "...");
+
+            // Try to connect as Client first to existing room
+            peer = new Peer();
 
             peer.on('open', () => {
-                showActionText("Room Created! Waiting for 2nd device (Code: " + roomCode + ")...");
+                // Try connecting to Host
+                const conn = peer.connect(fullRoomID);
+                
+                conn.on('open', () => {
+                    peerConn = conn;
+                    setupPeerEvents(peerConn);
+                    showActionText("Connected to Room as Client! Battle Start!");
+                });
+
+                conn.on('error', () => {
+                    startHostingRoom(fullRoomID, roomCode);
+                });
+
+                // Fallback timeout if peer doesn't exist (become host)
+                setTimeout(() => {
+                    if (!peerConn || !peerConn.open) {
+                        peer.destroy();
+                        startHostingRoom(fullRoomID, roomCode);
+                    }
+                }, 2000);
+            });
+        }
+
+        function startHostingRoom(fullRoomID, roomCode) {
+            peer = new Peer(fullRoomID);
+
+            peer.on('open', () => {
+                showActionText("Hosting Room Code: " + roomCode + " (Waiting for Friend...)");
+
+                peer.on('connection', (conn) => {
+                    peerConn = conn;
+                    setupPeerEvents(peerConn);
+                    showActionText("Friend Connected! Let's Fight!");
+                });
             });
 
-            peer.on('connection', (conn) => {
-                peerConn = conn;
-                setupPeerEvents(peerConn);
-                showActionText("2nd Device Joined! PvP Started!");
-            });
-
-            // If Host ID is taken, automatically act as Joiner (Client)
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
-                    peer = new Peer(); // Auto-assign unique ID
+                    showActionText("Room already active, joining as client...");
+                    peer = new Peer();
                     peer.on('open', () => {
-                        peerConn = peer.connect(hostID);
+                        peerConn = peer.connect(fullRoomID);
                         setupPeerEvents(peerConn);
-                        showActionText("Joined Device 1! Connected to Code " + roomCode);
                     });
-                } else {
-                    showActionText("Multiplayer Error: " + err.type);
                 }
             });
         }
 
         function setupPeerEvents(conn) {
+            conn.on('open', () => {
+                showActionText("Connection established successfully!");
+            });
+
             conn.on('data', (data) => {
                 if (data.type === 'pos') {
                     if (remotePlayerMesh) remotePlayerMesh.position.set(data.x, data.y - 1.5, data.z);
@@ -811,10 +827,12 @@
                     placeObsidianBlock(data.x, data.y, data.z);
                 } else if (data.type === 'crystal') {
                     placeEndCrystal(data.x, data.y, data.z);
+                } else if (data.type === 'damage') {
+                    damageRemotePlayer(data.amount);
+                    spawnParticleExplosion(remotePlayerMesh.position);
                 } else if (data.type === 'hit_me') {
                     takeDamage(data.damage || 3);
-                    showActionText("Hit by 2nd Device! (-" + (data.damage || 3) + " HP)");
-                    spawnParticleExplosion(camera.position);
+                    showActionText("Hit by Friend!");
                 }
             });
         }
@@ -947,7 +965,6 @@
         }
 
         function buildHeldItemModels() {
-            // Sword
             swordMesh = new THREE.Group();
             const bladeGeo = new THREE.BoxGeometry(0.08, 0.9, 0.04);
             const bladeMat = new THREE.MeshStandardMaterial({ color: 0x55ffff, metalness: 0.8, roughness: 0.2 });
@@ -963,7 +980,6 @@
             swordMesh.rotation.set(-0.2, -0.4, -0.3);
             camera.add(swordMesh);
 
-            // Totem
             heldTotemMesh = new THREE.Group();
             const tBodyGeo = new THREE.BoxGeometry(0.25, 0.35, 0.15);
             const tBodyMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.5 });
@@ -973,7 +989,6 @@
             heldTotemMesh.visible = false;
             camera.add(heldTotemMesh);
 
-            // Crossbow Model
             crossbowMesh = new THREE.Group();
             const cbBodyGeo = new THREE.BoxGeometry(0.08, 0.08, 0.6);
             const cbBodyMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
@@ -990,7 +1005,6 @@
             crossbowMesh.visible = false;
             camera.add(crossbowMesh);
 
-            // Heavy Mace Model
             maceMesh = new THREE.Group();
             const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
             const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
@@ -1024,12 +1038,6 @@
             const coreMesh = new THREE.Mesh(coreGeo, coreMat);
             coreMesh.position.y = 0.65;
             crystalGroup.add(coreMesh);
-
-            const flameGeo = new THREE.SphereGeometry(0.22, 8, 8);
-            const flameMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
-            const flameMesh = new THREE.Mesh(flameGeo, flameMat);
-            flameMesh.position.y = 0.65;
-            crystalGroup.add(flameMesh);
 
             const crystalGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
             const crystalMat = new THREE.MeshPhongMaterial({
@@ -1295,11 +1303,9 @@
                 return;
             }
 
-            // Mace Smash Damage Multiplier based on Fall Speed
             const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
             const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
 
-            // Hit Player Check (Brother Mode / PeerJS Device Mode)
             if (broPlayerMesh || remotePlayerMesh) {
                 const targetBro = broPlayerMesh || remotePlayerMesh;
                 const broHits = raycaster.intersectObjects(targetBro.children, true);
@@ -1308,10 +1314,12 @@
                         showActionText(`Hit Brother! (-${baseDmg} HP)`);
                         spawnParticleExplosion(targetBro.position);
                     } else if (gameMode === 'mp') {
+                        damageRemotePlayer(baseDmg);
                         if (peerConn && peerConn.open) {
                             peerConn.send({ type: 'hit_me', damage: baseDmg });
+                            peerConn.send({ type: 'damage', amount: baseDmg });
                         }
-                        showActionText(`Hit 2nd Device Player! (-${baseDmg} HP)`);
+                        showActionText(`Hit Enemy Player! (-${baseDmg} HP)`);
                         spawnParticleExplosion(targetBro.position);
                     }
                     return;
@@ -1322,20 +1330,8 @@
                 const steveHits = raycaster.intersectObjects(aiSteveMesh.children, true);
                 if (steveHits.length > 0) {
                     damageAISteve(baseDmg);
-                    if (currentSlot === 8 && fallDamageBonus > 1.5) {
-                        spawnParticleExplosion(aiSteveMesh.position);
-                        showActionText(`HEAVY MACE SMASH! (-${baseDmg} HP)`);
-                    }
                     return;
                 }
-            }
-
-            const dummyHits = raycaster.intersectObjects(dummyTargets.map(d => d.children[0]), true);
-            if (dummyHits.length > 0) {
-                const dummy = dummyHits[0].object.parent;
-                dummy.position.x += (Math.random() - 0.5) * 0.4;
-                dummy.position.z += (Math.random() - 0.5) * 0.4;
-                showActionText("Hit Target!");
             }
         }
 
@@ -1368,7 +1364,6 @@
             const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.2, metalness: 0.5 });
             const obsMesh = new THREE.Mesh(obsGeo, obsMat);
             obsMesh.position.set(x, y, z);
-            obsMesh.name = "obsidian";
             
             scene.add(obsMesh);
             placeableObjects.push(obsMesh);
@@ -1431,10 +1426,12 @@
 
             if (aiSteveMesh) {
                 const botDist = aiSteveMesh.position.distanceTo(explosionPos);
-                if (botDist < 6.0) {
-                    const botDamage = Math.round((1 - botDist / 6.0) * 8);
-                    damageAISteve(botDamage);
-                }
+                if (botDist < 6.0) damageAISteve(Math.round((1 - botDist / 6.0) * 8));
+            }
+
+            if (remotePlayerMesh) {
+                const remoteDist = remotePlayerMesh.position.distanceTo(explosionPos);
+                if (remoteDist < 6.0) damageRemotePlayer(Math.round((1 - remoteDist / 6.0) * 8));
             }
         }
 
@@ -1517,15 +1514,14 @@
             const delta = Math.min((time - prevTime) / 1000, 0.1); 
             prevTime = time;
 
+            if (remotePlayerHealthBarMesh) remotePlayerHealthBarMesh.lookAt(camera.position);
+
             if ((controls.isLocked || isMobile) && !isInventoryOpen) {
                 velocity.x -= velocity.x * (isGliding ? 2.0 : 10.0) * delta;
                 velocity.z -= velocity.z * (isGliding ? 2.0 : 10.0) * delta;
                 
-                if (isGliding) {
-                    velocity.y -= 4.0 * delta;
-                } else {
-                    velocity.y -= 25.0 * delta;
-                }
+                if (isGliding) velocity.y -= 4.0 * delta;
+                else velocity.y -= 25.0 * delta;
 
                 const inputDir = new THREE.Vector3(
                     Number(moveRight) - Number(moveLeft),
@@ -1551,7 +1547,6 @@
                 if (gameMode === 'ai') updateAISteveLogic(delta);
             }
 
-            // Update Active Crossbow Arrows
             for (let i = activeArrows.length - 1; i >= 0; i--) {
                 const arrow = activeArrows[i];
                 arrow.mesh.position.addScaledVector(arrow.dir, delta);
@@ -1559,17 +1554,7 @@
 
                 if (arrow.isFromBot) {
                     if (camera.position.distanceTo(arrow.mesh.position) < 1.5) {
-                        const arrowDmg = botDifficulty === 'hard' ? 5 : botDifficulty === 'medium' ? 3 : 2;
-                        takeDamage(arrowDmg);
-                        showActionText("AI Crossbow Hit You!");
-                        spawnParticleExplosion(arrow.mesh.position);
-                        scene.remove(arrow.mesh);
-                        activeArrows.splice(i, 1);
-                        continue;
-                    }
-                } else {
-                    if (aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.5) {
-                        damageAISteve(4);
+                        takeDamage(botDifficulty === 'hard' ? 5 : 3);
                         spawnParticleExplosion(arrow.mesh.position);
                         scene.remove(arrow.mesh);
                         activeArrows.splice(i, 1);
@@ -1605,7 +1590,6 @@
                     vel.y -= 15.0 * delta;
                 }
                 posAttr.needsUpdate = true;
-
                 ps.material.opacity = Math.max(0, 1.0 - ps.userData.age / 0.8);
 
                 if (ps.userData.age >= 0.8) {
