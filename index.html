@@ -114,8 +114,6 @@
         .option-group { display: flex; flex-direction: column; gap: 4px; text-align: left; margin-bottom: 8px; }
         .option-group label { color: #aaa; font-size: 12px; font-weight: bold; }
         .option-select, .option-input { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #ffaa00; border-radius: 4px; font-family: inherit; font-size: 13px; }
-        .toggle-btn { padding: 8px; background: #333; color: #ff5555; border: 1px solid #ffaa00; border-radius: 4px; font-weight: bold; cursor: pointer; text-align: center; }
-        .toggle-btn.active { background: #00aa55; color: #fff; }
 
         /* Start Screen Blocker */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 30; }
@@ -221,11 +219,6 @@
                             <option value="110">110° (Ultra Wide)</option>
                         </select>
                     </div>
-
-                    <div class="option-group">
-                        <label>FRIENDLY FIRE (DUEL BROTHER)</label>
-                        <div id="friendly-fire-btn" class="toggle-btn">Friendly Fire: OFF (Safe)</div>
-                    </div>
                 </div>
 
                 <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
@@ -240,7 +233,6 @@
 
                 <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
                     <p><b>Bot Upgrades:</b> AI Steve uses Crossbow, Elytra Wings & Fireworks!</p>
-                    <p><b>Friendly Fire Rules:</b> Both players must turn Friendly Fire ON to deal damage! If either has it OFF, damage is blocked!</p>
                 </div>
             </div>
         </div>
@@ -255,8 +247,6 @@
 
         // Settings State
         let botDifficulty = 'medium';
-        let friendlyFireEnabled = false;
-        let broFriendlyFireEnabled = false;
 
         // Mobile Controls Variables
         let isMobile = false;
@@ -408,21 +398,6 @@
                 camera.updateProjectionMatrix();
             });
 
-            const ffBtn = document.getElementById('friendly-fire-btn');
-            ffBtn.addEventListener('click', () => {
-                friendlyFireEnabled = !friendlyFireEnabled;
-                if (friendlyFireEnabled) {
-                    ffBtn.classList.add('active');
-                    ffBtn.innerText = "Friendly Fire: ON (Can Duel)";
-                } else {
-                    ffBtn.classList.remove('active');
-                    ffBtn.innerText = "Friendly Fire: OFF (Safe)";
-                }
-                if (peerConn && peerConn.open) {
-                    peerConn.send({ type: 'ff_toggle', enabled: friendlyFireEnabled });
-                }
-            });
-
             // Mode Selection Handlers
             document.getElementById('btn-mode-ai').addEventListener('click', () => {
                 gameMode = 'ai';
@@ -515,7 +490,7 @@
             }
         }
 
-        /* --- Player Meshes (Added Mace & Elytra Wings to Bot) --- */
+        /* --- Player Meshes --- */
         function createStevePlayerMesh(color = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
             
@@ -827,16 +802,9 @@
                     placeObsidianBlock(data.x, data.y, data.z);
                 } else if (data.type === 'crystal') {
                     placeEndCrystal(data.x, data.y, data.z);
-                } else if (data.type === 'ff_toggle') {
-                    broFriendlyFireEnabled = data.enabled;
-                    showActionText(`Brother's Friendly Fire: ${broFriendlyFireEnabled ? 'ON' : 'OFF'}`);
                 } else if (data.type === 'hit_me') {
-                    if (friendlyFireEnabled && broFriendlyFireEnabled) {
-                        takeDamage(data.damage || 3);
-                        showActionText("Hit by Brother!");
-                    } else {
-                        showActionText("Brother hit you! (Friendly Fire Off - No Damage)");
-                    }
+                    takeDamage(data.damage || 3);
+                    showActionText("Hit by Brother!");
                 }
             });
         }
@@ -1321,26 +1289,17 @@
             const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
             const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
 
-            // Hit Brother Check (FRIENDLY FIRE TOGGLE LOGIC)
+            // Hit Brother Check (Permanent Damage Enabled)
             if (broPlayerMesh || remotePlayerMesh) {
                 const targetBro = broPlayerMesh || remotePlayerMesh;
                 const broHits = raycaster.intersectObjects(targetBro.children, true);
                 if (broHits.length > 0) {
                     if (gameMode === 'bro') {
-                        if (friendlyFireEnabled) {
-                            showActionText(`Hit Brother! (-${baseDmg} HP - Friendly Fire ON)`);
-                            spawnParticleExplosion(targetBro.position);
-                        } else {
-                            showActionText("Hit Brother! (Friendly Fire OFF - No Damage)");
-                        }
+                        showActionText(`Hit Brother! (-${baseDmg} HP)`);
+                        spawnParticleExplosion(targetBro.position);
                     } else if (gameMode === 'mp') {
-                        if (friendlyFireEnabled && broFriendlyFireEnabled) {
-                            if (peerConn && peerConn.open) peerConn.send({ type: 'hit_me', damage: baseDmg });
-                            showActionText(`Hit Brother! (-${baseDmg} HP)`);
-                            spawnParticleExplosion(targetBro.position);
-                        } else {
-                            showActionText("Hit Brother! (Both must turn Friendly Fire ON to deal damage)");
-                        }
+                        if (peerConn && peerConn.open) peerConn.send({ type: 'hit_me', damage: baseDmg });
+                        showActionText(`Hit Brother! (-${baseDmg} HP)`);
                     }
                     return;
                 }
