@@ -269,6 +269,8 @@
         let currentSlot = 1; 
         let playerHealth = 10;
         const maxHealth = 10;
+        let brotherHealth = 10;
+        let brotherTotems = 64;
         let textTimeout = null;
         let isInventoryOpen = false;
 
@@ -289,6 +291,7 @@
         let aiSteveHealth = 10;
         let aiSteveTotems = 64;
         let aiSteveHealthBarMesh = null;
+        let brotherHealthBarMesh = null;
         let aiSteveVerticalVel = 0;
         let aiSteveIsSmashing = false;
 
@@ -622,9 +625,9 @@
             broPlayerMesh.position.set(-8, 0.5, -8);
             broPlayerMesh.name = "brother_player";
 
-            const nameTag = createOverheadHealthBar();
-            nameTag.position.set(0, 2.6, 0);
-            broPlayerMesh.add(nameTag);
+            brotherHealthBarMesh = createOverheadHealthBar();
+            brotherHealthBarMesh.position.set(0, 2.6, 0);
+            broPlayerMesh.add(brotherHealthBarMesh);
 
             scene.add(broPlayerMesh);
             showActionText("Brother Player Added!");
@@ -640,6 +643,48 @@
             if (healthPct > 0.5) fg.material.color.setHex(0x00ff00);
             else if (healthPct > 0.25) fg.material.color.setHex(0xffaa00);
             else fg.material.color.setHex(0xff0000);
+        }
+
+        function updateBrotherHealthBarUI() {
+            if (!brotherHealthBarMesh) return;
+            const fg = brotherHealthBarMesh.userData.fgMesh;
+            const healthPct = Math.max(0, brotherHealth / maxHealth);
+            fg.scale.x = healthPct;
+            fg.position.x = (healthPct - 1) * 0.68;
+
+            if (healthPct > 0.5) fg.material.color.setHex(0x00ff00);
+            else if (healthPct > 0.25) fg.material.color.setHex(0xffaa00);
+            else fg.material.color.setHex(0xff0000);
+        }
+
+        function damageBrother(amount) {
+            if (!broPlayerMesh) return;
+            brotherHealth -= amount;
+            spawnParticleExplosion(broPlayerMesh.position);
+
+            if (brotherHealth <= 0) {
+                if (brotherTotems > 0) {
+                    brotherTotems--;
+                    brotherHealth = maxHealth;
+                    playSound('totem');
+                    showActionText(`BROTHER POPPED A TOTEM! (${brotherTotems} left)`);
+                } else {
+                    playSound('explode');
+                    showActionText("YOU DEFEATED YOUR BROTHER!");
+                    scene.remove(broPlayerMesh);
+                    broPlayerMesh = null;
+
+                    setTimeout(() => {
+                        if (gameMode === 'bro') {
+                            brotherTotems = 64;
+                            brotherHealth = maxHealth;
+                            spawnBrotherPlayer();
+                        }
+                    }, 3000);
+                    return;
+                }
+            }
+            updateBrotherHealthBarUI();
         }
 
         function damageAISteve(amount) {
@@ -1328,8 +1373,8 @@
                 if (broHits.length > 0) {
                     if (gameMode === 'bro') {
                         if (friendlyFireEnabled) {
+                            damageBrother(baseDmg);
                             showActionText(`Hit Brother! (-${baseDmg} HP - Friendly Fire ON)`);
-                            spawnParticleExplosion(targetBro.position);
                         } else {
                             showActionText("Hit Brother! (Friendly Fire OFF - No Damage)");
                         }
@@ -1463,6 +1508,14 @@
                     damageAISteve(botDamage);
                 }
             }
+
+            if (broPlayerMesh && friendlyFireEnabled) {
+                const broDist = broPlayerMesh.position.distanceTo(explosionPos);
+                if (broDist < 6.0) {
+                    const broDamage = Math.round((1 - broDist / 6.0) * 8);
+                    damageBrother(broDamage);
+                }
+            }
         }
 
         function spawnParticleExplosion(pos) {
@@ -1576,6 +1629,7 @@
 
                 if (gameMode === 'mp') broadcastPlayerPos();
                 if (gameMode === 'ai') updateAISteveLogic(delta);
+                if (gameMode === 'bro' && brotherHealthBarMesh) brotherHealthBarMesh.lookAt(camera.position);
             }
 
             // Update Active Crossbow Arrows
@@ -1595,6 +1649,18 @@
                         continue;
                     }
                 } else {
+                    if (broPlayerMesh && arrow.mesh.position.distanceTo(broPlayerMesh.position) < 1.5) {
+                        if (friendlyFireEnabled) {
+                            damageBrother(4);
+                            showActionText("Shot Brother with Crossbow!");
+                        } else {
+                            showActionText("Shot Brother! (Friendly Fire OFF)");
+                        }
+                        spawnParticleExplosion(arrow.mesh.position);
+                        scene.remove(arrow.mesh);
+                        activeArrows.splice(i, 1);
+                        continue;
+                    }
                     if (aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.5) {
                         damageAISteve(4);
                         spawnParticleExplosion(arrow.mesh.position);
