@@ -768,30 +768,39 @@
 
         /* --- PeerJS Device-to-Device Room Code Multiplayer --- */
         function initMultiplayer(roomCode) {
-            const myPeerID = "donut-smp-" + roomCode + "-host";
-            const joinPeerID = "donut-smp-" + roomCode + "-join";
+            const hostID = "donut-smp-" + roomCode + "-host";
 
-            peer = new Peer(myPeerID);
+            // Spawn local remote mesh visually for opponent
+            remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
+            remotePlayerMesh.position.set(-10, 0.5, -10);
+            scene.add(remotePlayerMesh);
 
-            peer.on('open', () => { showActionText("Hosting Room Code: " + roomCode); });
-            peer.on('error', (err) => {
-                peer = new Peer(joinPeerID);
-                peer.on('open', () => {
-                    peerConn = peer.connect(myPeerID);
-                    setupPeerEvents(peerConn);
-                    showActionText("Connected to Room " + roomCode + "!");
-                });
+            // Attempt to connect as Host first
+            peer = new Peer(hostID);
+
+            peer.on('open', () => {
+                showActionText("Room Created! Waiting for 2nd device (Code: " + roomCode + ")...");
             });
 
             peer.on('connection', (conn) => {
                 peerConn = conn;
                 setupPeerEvents(peerConn);
-                showActionText("Brother Joined the Match!");
+                showActionText("2nd Device Joined! PvP Started!");
             });
 
-            remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
-            remotePlayerMesh.position.set(-10, 0.5, -10);
-            scene.add(remotePlayerMesh);
+            // If Host ID is taken, automatically act as Joiner (Client)
+            peer.on('error', (err) => {
+                if (err.type === 'unavailable-id') {
+                    peer = new Peer(); // Auto-assign unique ID
+                    peer.on('open', () => {
+                        peerConn = peer.connect(hostID);
+                        setupPeerEvents(peerConn);
+                        showActionText("Joined Device 1! Connected to Code " + roomCode);
+                    });
+                } else {
+                    showActionText("Multiplayer Error: " + err.type);
+                }
+            });
         }
 
         function setupPeerEvents(conn) {
@@ -804,7 +813,8 @@
                     placeEndCrystal(data.x, data.y, data.z);
                 } else if (data.type === 'hit_me') {
                     takeDamage(data.damage || 3);
-                    showActionText("Hit by Brother!");
+                    showActionText("Hit by 2nd Device! (-" + (data.damage || 3) + " HP)");
+                    spawnParticleExplosion(camera.position);
                 }
             });
         }
@@ -1289,7 +1299,7 @@
             const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
             const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
 
-            // Hit Brother Check (Permanent Damage Enabled)
+            // Hit Player Check (Brother Mode / PeerJS Device Mode)
             if (broPlayerMesh || remotePlayerMesh) {
                 const targetBro = broPlayerMesh || remotePlayerMesh;
                 const broHits = raycaster.intersectObjects(targetBro.children, true);
@@ -1298,8 +1308,11 @@
                         showActionText(`Hit Brother! (-${baseDmg} HP)`);
                         spawnParticleExplosion(targetBro.position);
                     } else if (gameMode === 'mp') {
-                        if (peerConn && peerConn.open) peerConn.send({ type: 'hit_me', damage: baseDmg });
-                        showActionText(`Hit Brother! (-${baseDmg} HP)`);
+                        if (peerConn && peerConn.open) {
+                            peerConn.send({ type: 'hit_me', damage: baseDmg });
+                        }
+                        showActionText(`Hit 2nd Device Player! (-${baseDmg} HP)`);
+                        spawnParticleExplosion(targetBro.position);
                     }
                     return;
                 }
