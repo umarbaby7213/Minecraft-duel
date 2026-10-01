@@ -82,10 +82,10 @@
         /* Inventory & Hotbar UI */
         #hotbar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
         #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .slot { width: 44px; height: 44px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 18px; position: relative; cursor: pointer; }
+        .slot { width: 40px; height: 40px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 16px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 8px #fff; }
-        .slot-num { position: absolute; top: 1px; left: 3px; font-size: 9px; color: #aaa; font-weight: bold; }
-        .count-badge { position: absolute; bottom: 1px; right: 3px; font-size: 10px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
+        .slot-num { position: absolute; top: 1px; left: 2px; font-size: 8px; color: #aaa; font-weight: bold; }
+        .count-badge { position: absolute; bottom: 1px; right: 2px; font-size: 9px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
         /* Full Inventory GUI Screen (Opened with 'E') */
         #inventory-screen {
@@ -183,7 +183,7 @@
                 </div>
             </div>
 
-            <!-- Hotbar (8 Slots) -->
+            <!-- Hotbar (9 Slots) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
                     <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
@@ -194,6 +194,7 @@
                     <div class="slot" id="slot-6" onclick="selectSlot(6)"><span class="slot-num">6</span>🏹<span class="count-badge" id="arrow-count">64</span></div>
                     <div class="slot" id="slot-7" onclick="selectSlot(7)"><span class="slot-num">7</span>🚀<span class="count-badge" id="firework-count">64</span></div>
                     <div class="slot" id="slot-8" onclick="selectSlot(8)"><span class="slot-num">8</span>🔨<span class="count-badge" id="mace-count">64</span></div>
+                    <div class="slot" id="slot-9" onclick="selectSlot(9)"><span class="slot-num">9</span>🟣<span class="count-badge" id="enderpearl-count">64</span></div>
                 </div>
             </div>
         </div>
@@ -269,7 +270,7 @@
         let isInventoryOpen = false;
 
         // Player Item Counts
-        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64, mace: 64 };
+        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64, mace: 64, enderpearl: 64 };
 
         // Elytra State
         let isGliding = false;
@@ -292,10 +293,11 @@
         let aiSteveIsSmashing = false;
 
         // Held Item Meshes
-        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh;
+        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh;
 
         // Active Projectiles & Systems
         const activeArrows = [];
+        const activeEnderPearls = [];
         const placeableObjects = [];
         const endCrystals = [];
         const dummyTargets = [];
@@ -326,9 +328,9 @@
                 gain.gain.setValueAtTime(0.9, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
                 osc.start(now); osc.stop(now + 0.4);
-            } else if (type === 'shoot') {
+            } else if (type === 'shoot' || type === 'pearl') {
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(600, now);
+                osc.frequency.setValueAtTime(type === 'pearl' ? 450 : 600, now);
                 osc.frequency.exponentialRampToValueAtTime(150, now + 0.15);
                 gain.gain.setValueAtTime(0.5, now);
                 gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
@@ -465,12 +467,12 @@
 
             const items = [
                 { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' },
-                { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' },
-                { icon: '🚀', type: 'firework' }, { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' },
-                { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' },
-                { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' },
-                { icon: '🍎', type: 'gapple' }, { icon: '🏹', type: 'arrow' }
+                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
+                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
+                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }
             ];
 
             items.forEach(item => {
@@ -1022,6 +1024,15 @@
             maceMesh.rotation.set(-0.2, -0.4, -0.3);
             maceMesh.visible = false;
             camera.add(maceMesh);
+
+            enderpearlMesh = new THREE.Group();
+            const pearlGeo = new THREE.SphereGeometry(0.12, 8, 8);
+            const pearlMat = new THREE.MeshStandardMaterial({ color: 0x00ffaa, emissive: 0x00aa66, roughness: 0.2 });
+            const pearl = new THREE.Mesh(pearlGeo, pearlMat);
+            enderpearlMesh.add(pearl);
+            enderpearlMesh.position.set(0.35, -0.35, -0.5);
+            enderpearlMesh.visible = false;
+            camera.add(enderpearlMesh);
         }
 
         function createEndCrystalMesh() {
@@ -1082,6 +1093,7 @@
                     case 'Digit6': selectSlot(6); break;
                     case 'Digit7': selectSlot(7); break;
                     case 'Digit8': selectSlot(8); break;
+                    case 'Digit9': selectSlot(9); break;
                 }
             });
 
@@ -1095,8 +1107,8 @@
             });
 
             document.addEventListener('wheel', (e) => {
-                if (e.deltaY > 0) selectSlot(currentSlot % 8 + 1);
-                else selectSlot((currentSlot - 2 + 8) % 8 + 1);
+                if (e.deltaY > 0) selectSlot(currentSlot % 9 + 1);
+                else selectSlot((currentSlot - 2 + 9) % 9 + 1);
             });
         }
 
@@ -1202,7 +1214,7 @@
 
         function selectSlot(slotNum) {
             currentSlot = slotNum;
-            for (let i = 1; i <= 8; i++) {
+            for (let i = 1; i <= 9; i++) {
                 const el = document.getElementById(`slot-${i}`);
                 if (el) {
                     if (i === slotNum) el.classList.add('active');
@@ -1214,6 +1226,7 @@
             heldTotemMesh.visible = (currentSlot === 5);
             crossbowMesh.visible = (currentSlot === 6);
             maceMesh.visible = (currentSlot === 8);
+            enderpearlMesh.visible = (currentSlot === 9);
         }
 
         function setupMouseInteraction() {
@@ -1269,6 +1282,31 @@
             showActionText("Shot Crossbow Rocket Arrow!");
         }
 
+        function throwEnderPearl() {
+            if (counts.enderpearl <= 0) return;
+            counts.enderpearl--;
+            document.getElementById('enderpearl-count').innerText = counts.enderpearl;
+
+            playSound('pearl');
+
+            const pearlGeo = new THREE.SphereGeometry(0.15, 8, 8);
+            const pearlMat = new THREE.MeshBasicMaterial({ color: 0x00ffaa });
+            const pearlMesh = new THREE.Mesh(pearlGeo, pearlMat);
+
+            const dir = new THREE.Vector3();
+            camera.getWorldDirection(dir);
+
+            pearlMesh.position.copy(camera.position).add(dir.clone().multiplyScalar(0.8));
+            scene.add(pearlMesh);
+
+            activeEnderPearls.push({
+                mesh: pearlMesh,
+                velocity: dir.clone().multiplyScalar(35.0).add(new THREE.Vector3(0, 5.0, 0)),
+                age: 0
+            });
+            showActionText("Threw Ender Pearl!");
+        }
+
         function useFireworkBoost() {
             if (counts.firework <= 0) return;
             counts.firework--;
@@ -1292,6 +1330,7 @@
             if (currentSlot === 1) swingSwordAnimation();
             else if (currentSlot === 6) { shootCrossbow(); return; }
             else if (currentSlot === 8) swingMaceAnimation();
+            else if (currentSlot === 9) { throwEnderPearl(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -1338,6 +1377,7 @@
         function handleRightClick() {
             if (currentSlot === 2) { eatGoldenApple(); return; }
             if (currentSlot === 7) { useFireworkBoost(); return; }
+            if (currentSlot === 9) { throwEnderPearl(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             const intersects = raycaster.intersectObjects(placeableObjects, false);
@@ -1569,6 +1609,23 @@
                 }
             }
 
+            for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
+                const pearl = activeEnderPearls[i];
+                pearl.mesh.position.addScaledVector(pearl.velocity, delta);
+                pearl.velocity.y -= 20.0 * delta;
+                pearl.age += delta;
+
+                if (pearl.mesh.position.y <= 0.6 || pearl.age > 3.0) {
+                    controls.getObject().position.copy(pearl.mesh.position);
+                    controls.getObject().position.y = 2.5;
+                    spawnParticleExplosion(pearl.mesh.position);
+                    playSound('explode');
+                    scene.remove(pearl.mesh);
+                    activeEnderPearls.splice(i, 1);
+                    showActionText("Teleported via Ender Pearl!");
+                }
+            }
+
             endCrystals.forEach(c => {
                 if (c.userData.outerCrystal) {
                     c.userData.outerCrystal.rotation.y += delta * 1.5;
@@ -1606,22 +1663,4 @@
         window.onload = init;
     </script>
 </body>
-    <script>
-  // Disable right-click menu
-  document.addEventListener('contextmenu', function(e) {
-    e.preventDefault();
-  });
-
-  // Disable Ctrl+U, F12, and DevTools shortcuts
-  document.addEventListener('keydown', function(e) {
-    if (
-      e.key === 'F12' || 
-      (e.ctrlKey && e.key === 'u') || 
-      (e.ctrlKey && e.key === 'U') ||
-      (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))
-    ) {
-      e.preventDefault();
-    }
-  });
-</script>
 </html>
