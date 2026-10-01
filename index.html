@@ -1606,4 +1606,22 @@
         window.onload = init;
     </script>
 </body>
+    <script>
+  // Disable right-click menu
+  document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+  });
+
+  // Disable Ctrl+U, F12, and DevTools shortcuts
+  document.addEventListener('keydown', function(e) {
+    if (
+      e.key === 'F12' || 
+      (e.ctrlKey && e.key === 'u') || 
+      (e.ctrlKey && e.key === 'U') ||
+      (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'J' || e.key === 'C'))
+    ) {
+      e.preventDefault();
+    }
+  });
+</script>
 </html>
