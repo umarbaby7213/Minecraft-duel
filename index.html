@@ -976,6 +976,13 @@
                     aiSteveMesh.position.y = 0.5;
                     aiSteveVerticalVel = 0;
 
+                    const botDist = Math.sqrt(aiSteveMesh.position.x * aiSteveMesh.position.x + aiSteveMesh.position.z * aiSteveMesh.position.z);
+                    if (botDist > 34) {
+                        const angle = Math.atan2(aiSteveMesh.position.z, aiSteveMesh.position.x);
+                        aiSteveMesh.position.x = Math.cos(angle) * 34;
+                        aiSteveMesh.position.z = Math.sin(angle) * 34;
+                    }
+
                     if (aiSteveIsSmashing) {
                         aiSteveIsSmashing = false;
                         playSound('mace');
@@ -996,8 +1003,14 @@
                 dir.y = 0;
                 dir.normalize();
 
-                aiSteveMesh.position.x += dir.x * 5.0 * speedMult * delta;
-                aiSteveMesh.position.z += dir.z * 5.0 * speedMult * delta;
+                const nextX = aiSteveMesh.position.x + dir.x * 5.0 * speedMult * delta;
+                const nextZ = aiSteveMesh.position.z + dir.z * 5.0 * speedMult * delta;
+                const nextDist = Math.sqrt(nextX * nextX + nextZ * nextZ);
+
+                if (nextDist <= 34) {
+                    aiSteveMesh.position.x = nextX;
+                    aiSteveMesh.position.z = nextZ;
+                }
 
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
 
@@ -1142,12 +1155,12 @@
             const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
             const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
 
-            // Create extended terrain so walking outside floor looks continuous
             const sandPositions = [];
-            const outerFloorRadius = 100;
-            for (let x = -outerFloorRadius; x <= outerFloorRadius; x++) {
-                for (let z = -outerFloorRadius; z <= outerFloorRadius; z++) {
-                    sandPositions.push(new THREE.Vector3(x, 0, z));
+            for (let x = -radius; x <= radius; x++) {
+                for (let z = -radius; z <= radius; z++) {
+                    if (x * x + z * z <= radius * radius) {
+                        sandPositions.push(new THREE.Vector3(x, 0, z));
+                    }
                 }
             }
 
@@ -1212,7 +1225,7 @@
             stoneTransforms.push(...getRingTransforms(pillarRadius + 1, 20, 1));
             const roofTransforms = getRingTransforms(pillarRadius, 21, 1);
 
-            function createBatchMesh(geometry, material, transforms) {
+            function createBatchMesh(geometry, material, transforms, isSolidWall = false) {
                 if (transforms.length === 0) return;
                 const instanced = new THREE.InstancedMesh(geometry, material, transforms.length);
                 const mat = new THREE.Matrix4();
@@ -1221,16 +1234,23 @@
                     scaleVec.set(t.sx || 1, t.sy || 1, t.sz || 1);
                     mat.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion(), scaleVec);
                     instanced.setMatrixAt(i, mat);
+
+                    if (isSolidWall) {
+                        const colliderBox = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: false }));
+                        colliderBox.position.set(t.x, t.y, t.z);
+                        colliderBox.scale.copy(scaleVec);
+                        solidColliders.push(colliderBox);
+                    }
                 });
                 instanced.instanceMatrix.needsUpdate = true;
                 scene.add(instanced);
             }
 
-            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms);
-            createBatchMesh(boxGeo, stoneMat, stoneTransforms);
-            createBatchMesh(boxGeo, pillarMat, pillarTransforms);
-            createBatchMesh(boxGeo, leafMat, leafTransforms);
-            createBatchMesh(boxGeo, roofMat, roofTransforms);
+            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms, true);
+            createBatchMesh(boxGeo, stoneMat, stoneTransforms, true);
+            createBatchMesh(boxGeo, pillarMat, pillarTransforms, true);
+            createBatchMesh(boxGeo, leafMat, leafTransforms, false);
+            createBatchMesh(boxGeo, roofMat, roofTransforms, true);
         }
 
         function spawnDummyTargets() {
@@ -1928,6 +1948,14 @@
                         playerObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
                         canJump = true;
                         isGliding = false;
+                    }
+
+                    // Arena Border Constraints (35 Radius Boundary)
+                    const pDist = Math.sqrt(playerObj.position.x * playerObj.position.x + playerObj.position.z * playerObj.position.z);
+                    if (pDist > 34) {
+                        const angle = Math.atan2(playerObj.position.z, playerObj.position.x);
+                        playerObj.position.x = Math.cos(angle) * 34;
+                        playerObj.position.z = Math.sin(angle) * 34;
                     }
 
                     broadcastPlayerPos();
