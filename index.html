@@ -136,7 +136,7 @@
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
-        <div id="action-text">Solid Arena Walls & Void Collision Enabled!</div>
+        <div id="action-text">Arena Floor Setting Updated!</div>
 
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -246,6 +246,13 @@
         let canJump = false;
         const velocity = new THREE.Vector3();
         let prevTime = performance.now();
+
+        // Floor / Arena Collision Configuration
+        const floorConfig = {
+            cancoil: false,
+            solid: true,
+            friction: 0.9
+        };
 
         let botDifficulty = 'medium';
         let isMobile = false;
@@ -1055,8 +1062,8 @@
                 switch (e.code) {
                     case 'KeyW': moveForward = true; break;
                     case 'KeyS': moveBackward = true; break;
-                    case 'KeyA': moveRight = true; break; // Fixed: A moves left, D moves right
-                    case 'KeyD': moveLeft = true; break;  // Fixed: A moves left, D moves right
+                    case 'KeyA': moveRight = true; break;
+                    case 'KeyD': moveLeft = true; break;
                     case 'Space': 
                         if (canJump) { 
                             velocity.y += 11.0; 
