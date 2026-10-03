@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Donut SMP - End Crystal PvP</title>
-    <link href="https://fonts.cdnfonts.com/css/minecraft-4" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -166,7 +165,7 @@
         <div id="death-screen">
             <div id="death-box">
                 <h1>YOU DIED!</h1>
-                <p>YOU WERE SLAIN BY AI STEVE!</p>
+                <p id="death-msg">YOU WERE SLAIN BY AI STEVE!</p>
                 <button class="respawn-btn" id="btn-respawn">RESPAWN</button>
             </div>
         </div>
@@ -182,7 +181,7 @@
 
         <!-- Full Inventory GUI Screen (Opened with 'E') -->
         <div id="inventory-screen">
-            <h3>PLAYER INVENTORY (Press E to Close)[cite: 3]</h3>
+            <h3>PLAYER INVENTORY (Press E to Close)</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
             <p style="font-size: 11px; color: #333; text-align: center; margin-top: 5px;">Click slot A then slot B to shift/swap items anywhere!</p>
         </div>
@@ -901,10 +900,10 @@
                     aiSteveVerticalVel = 0;
 
                     const botDist = Math.sqrt(aiSteveMesh.position.x * aiSteveMesh.position.x + aiSteveMesh.position.z * aiSteveMesh.position.z);
-                    if (botDist > 34) {
+                    if (botDist > 15) {
                         const angle = Math.atan2(aiSteveMesh.position.z, aiSteveMesh.position.x);
-                        aiSteveMesh.position.x = Math.cos(angle) * 34;
-                        aiSteveMesh.position.z = Math.sin(angle) * 34;
+                        aiSteveMesh.position.x = Math.cos(angle) * 15;
+                        aiSteveMesh.position.z = Math.sin(angle) * 15;
                     }
 
                     if (aiSteveIsSmashing) {
@@ -914,7 +913,7 @@
 
                         if (dist < 4.0) {
                             const smashDmg = botDifficulty === 'hard' ? 7 : botDifficulty === 'medium' ? 5 : 3;
-                            takeDamage(smashDmg);
+                            takeDamage(smashDmg, 'steve');
                             showActionText("AI STEVE LANDED A MACE SMASH ATTACK!");
                         }
                     }
@@ -931,7 +930,7 @@
                 const nextZ = aiSteveMesh.position.z + dir.z * 5.0 * speedMult * delta;
                 const nextDist = Math.sqrt(nextX * nextX + nextZ * nextZ);
 
-                if (nextDist <= 34) {
+                if (nextDist <= 15) {
                     aiSteveMesh.position.x = nextX;
                     aiSteveMesh.position.z = nextZ;
                 }
@@ -956,7 +955,7 @@
                         aiSteveTimer = 0;
                         playSound('mace');
                         const maceDmg = botDifficulty === 'hard' ? 4 : botDifficulty === 'medium' ? 3 : 2;
-                        takeDamage(maceDmg);
+                        takeDamage(maceDmg, 'steve');
                         showActionText("AI Steve Hit You with Mace!");
                     }
                 }
@@ -1047,7 +1046,7 @@
                     damageRemotePlayer(data.amount);
                     if (remotePlayerMesh) spawnParticleExplosion(remotePlayerMesh.position);
                 } else if (data.type === 'hit_me') {
-                    takeDamage(data.damage || 3);
+                    takeDamage(data.damage || 3, 'steve');
                     showActionText("Hit by Enemy Player!");
                 }
             });
@@ -1069,7 +1068,7 @@
 
         function buildColosseumArenaInstanced() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-            const radius = 35;
+            const radius = 15;
 
             const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
             const stoneMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.8 });
@@ -1664,7 +1663,7 @@
             const dist = camera.position.distanceTo(crystalObj.position);
             if (dist < 6.0) {
                 const dmg = Math.round((6.0 - dist) * 1.5) + 3;
-                takeDamage(dmg);
+                takeDamage(dmg, 'crystal');
                 showActionText(`BOOM! End Crystal Damage (-${dmg} HP)`);
             }
         }
@@ -1679,7 +1678,7 @@
             showActionText("Ate Golden Apple (+4 Health)");
         }
 
-        function takeDamage(amount) {
+        function takeDamage(amount, cause = 'steve') {
             playerHealth -= amount;
             updateHeartsUI();
 
@@ -1700,8 +1699,15 @@
                     showActionText("TOTEM OF UNDYING SAVED YOU!");
                 } else {
                     if (!isMobile) controls.unlock();
+                    const deathMsg = document.getElementById('death-msg');
+                    if (cause === 'crystal') {
+                        deathMsg.innerText = "You were slain by end cyristial";
+                    } else if (cause === 'void') {
+                        deathMsg.innerText = "You were slain by void";
+                    } else {
+                        deathMsg.innerText = "YOU WERE SLAIN BY AI STEVE!";
+                    }
                     document.getElementById('death-screen').style.display = 'flex';
-                    showActionText("YOU WERE SLAIN BY AI STEVE!");
                 }
             }
         }
@@ -1786,7 +1792,7 @@
 
                 const playerRadius = 0.4;
                 const distFromCenter = Math.sqrt(camObj.position.x * camObj.position.x + camObj.position.z * camObj.position.z);
-                const arenaRadius = 35;
+                const arenaRadius = 15;
 
                 const isInVoid = distFromCenter > arenaRadius;
 
@@ -1822,7 +1828,7 @@
                 if (camObj.position.y <= floorLimit) {
                     if (isInVoid) {
                         showActionText("FALLEN INTO THE VOID!");
-                        takeDamage(maxHealth);
+                        takeDamage(maxHealth, 'void');
                         camObj.position.set(0, 15, 0);
                         velocity.set(0, 0, 0);
                         isGliding = false;
