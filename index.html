@@ -284,6 +284,7 @@
         let aiSteveHealthBarMesh = null;
         let aiSteveVerticalVel = 0;
         let aiSteveIsSmashing = false;
+        let aiSteveWalkAnimTimer = 0;
 
         let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh;
 
@@ -489,35 +490,86 @@
             }
         }
 
-        function createStevePlayerMesh(color = 0x00aaff, isBot = false) {
+        /* Fully Detailed Blocky Minecraft Character Rig Standing On Floor */
+        function createStevePlayerMesh(shirtColor = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
-            
-            const bodyGeo = new THREE.CylinderGeometry(0.4, 0.4, 1.8, 8);
-            const bodyMat = new THREE.MeshStandardMaterial({ color: color });
-            const body = new THREE.Mesh(bodyGeo, bodyMat);
-            body.position.y = 0.9;
-            steveGroup.add(body);
 
-            const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0xffcc99 });
-            const head = new THREE.Mesh(headGeo, headMat);
-            head.position.y = 2.0;
-            steveGroup.add(head);
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffcc99, roughness: 0.8 });
+            const shirtMat = new THREE.MeshStandardMaterial({ color: shirtColor, roughness: 0.7 });
+            const pantsMat = new THREE.MeshStandardMaterial({ color: 0x002288, roughness: 0.8 });
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a2e12, roughness: 0.9 });
+
+            // Torso (0.8 x 0.9 x 0.4)
+            const torsoGeo = new THREE.BoxGeometry(0.8, 0.9, 0.4);
+            const torso = new THREE.Mesh(torsoGeo, shirtMat);
+            torso.position.y = 1.05;
+            steveGroup.add(torso);
+
+            // Head (0.6 x 0.6 x 0.6)
+            const headGroup = new THREE.Group();
+            headGroup.position.set(0, 1.5, 0);
+
+            const headGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+            const head = new THREE.Mesh(headGeo, skinMat);
+            headGroup.add(head);
+
+            const hairGeo = new THREE.BoxGeometry(0.62, 0.2, 0.62);
+            const hair = new THREE.Mesh(hairGeo, hairMat);
+            hair.position.y = 0.25;
+            headGroup.add(hair);
+
+            steveGroup.add(headGroup);
+
+            // Left Leg Pivot
+            const leftLegPivot = new THREE.Group();
+            leftLegPivot.position.set(-0.2, 0.6, 0);
+            const legGeo = new THREE.BoxGeometry(0.38, 0.6, 0.38);
+            const leftLeg = new THREE.Mesh(legGeo, pantsMat);
+            leftLeg.position.y = -0.3;
+            leftLegPivot.add(leftLeg);
+            steveGroup.add(leftLegPivot);
+
+            // Right Leg Pivot
+            const rightLegPivot = new THREE.Group();
+            rightLegPivot.position.set(0.2, 0.6, 0);
+            const rightLeg = new THREE.Mesh(legGeo, pantsMat);
+            rightLeg.position.y = -0.3;
+            rightLegPivot.add(rightLeg);
+            steveGroup.add(rightLegPivot);
+
+            // Left Arm Pivot
+            const leftArmPivot = new THREE.Group();
+            leftArmPivot.position.set(-0.58, 1.4, 0);
+            const armGeo = new THREE.BoxGeometry(0.36, 0.8, 0.36);
+            const leftArm = new THREE.Mesh(armGeo, shirtMat);
+            leftArm.position.y = -0.4;
+            leftArmPivot.add(leftArm);
+            steveGroup.add(leftArmPivot);
+
+            // Right Arm Pivot
+            const rightArmPivot = new THREE.Group();
+            rightArmPivot.position.set(0.58, 1.4, 0);
+            const rightArm = new THREE.Mesh(armGeo, shirtMat);
+            rightArm.position.y = -0.4;
+            rightArmPivot.add(rightArm);
+            steveGroup.add(rightArmPivot);
 
             if (isBot) {
+                // Elytra Wings
                 const wingGeo = new THREE.BoxGeometry(0.1, 0.9, 0.4);
                 const wingMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.3 });
                 
                 const leftWing = new THREE.Mesh(wingGeo, wingMat);
-                leftWing.position.set(-0.35, 1.1, -0.25);
+                leftWing.position.set(-0.25, 1.05, -0.25);
                 leftWing.rotation.set(0.2, 0.3, 0.4);
                 steveGroup.add(leftWing);
 
                 const rightWing = new THREE.Mesh(wingGeo, wingMat);
-                rightWing.position.set(0.35, 1.1, -0.25);
+                rightWing.position.set(0.25, 1.05, -0.25);
                 rightWing.rotation.set(0.2, -0.3, -0.4);
                 steveGroup.add(rightWing);
 
+                // Held Mace attached to Right Arm
                 const botMace = new THREE.Group();
                 const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
                 const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
@@ -531,10 +583,14 @@
                 maceHead.position.y = 0.8;
                 botMace.add(maceHead);
 
-                botMace.position.set(0.5, 0.8, 0.3);
-                botMace.rotation.set(-0.3, 0, -0.2);
-                steveGroup.add(botMace);
+                botMace.position.set(0, -0.6, 0.2);
+                botMace.rotation.set(-0.8, 0, 0);
+                rightArmPivot.add(botMace);
             }
+
+            steveGroup.userData = {
+                leftLegPivot, rightLegPivot, leftArmPivot, rightArmPivot, headGroup
+            };
 
             return steveGroup;
         }
@@ -562,7 +618,7 @@
             aiSteveMesh.name = "ai_steve";
 
             aiSteveHealthBarMesh = createOverheadHealthBar();
-            aiSteveHealthBarMesh.position.set(0, 2.6, 0);
+            aiSteveHealthBarMesh.position.set(0, 2.2, 0);
             aiSteveMesh.add(aiSteveHealthBarMesh);
 
             scene.add(aiSteveMesh);
@@ -575,7 +631,7 @@
             broPlayerMesh.name = "brother_player";
 
             const nameTag = createOverheadHealthBar();
-            nameTag.position.set(0, 2.6, 0);
+            nameTag.position.set(0, 2.2, 0);
             broPlayerMesh.add(nameTag);
 
             scene.add(broPlayerMesh);
@@ -687,7 +743,7 @@
             }
 
             aiSteveFireworkTimer += delta;
-            if (aiSteveFireworkTimer > fireworkCooldown && aiSteveMesh.position.y <= 0.6) {
+            if (aiSteveFireworkTimer > fireworkCooldown && aiSteveMesh.position.y <= 0.5) {
                 aiSteveFireworkTimer = 0;
                 aiSteveVerticalVel = botDifficulty === 'hard' ? 22.0 : 18.0; 
                 aiSteveIsSmashing = true;
@@ -718,6 +774,7 @@
                 }
             }
 
+            const parts = aiSteveMesh.userData;
             if (dist > 2.5) {
                 const dir = playerPos.clone().sub(aiSteveMesh.position);
                 dir.y = 0;
@@ -725,14 +782,30 @@
                 aiSteveMesh.position.x += dir.x * 5.0 * speedMult * delta;
                 aiSteveMesh.position.z += dir.z * 5.0 * speedMult * delta;
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
-            } else if (dist <= 2.5 && aiSteveMesh.position.y <= 0.6) {
-                aiSteveTimer += delta;
-                if (aiSteveTimer > hitInterval) {
-                    aiSteveTimer = 0;
-                    playSound('mace');
-                    const maceDmg = botDifficulty === 'hard' ? 4 : botDifficulty === 'medium' ? 3 : 2;
-                    takeDamage(maceDmg);
-                    showActionText("AI Steve Hit You with Mace!");
+
+                // Walking limb animation
+                aiSteveWalkAnimTimer += delta * 10 * speedMult;
+                const swing = Math.sin(aiSteveWalkAnimTimer) * 0.6;
+                if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = swing;
+                if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = -swing;
+                if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = -swing;
+                if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = swing;
+            } else {
+                // Standing default posture
+                if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = 0;
+                if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = 0;
+                if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = 0;
+                if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = 0;
+
+                if (dist <= 2.5 && aiSteveMesh.position.y <= 0.5) {
+                    aiSteveTimer += delta;
+                    if (aiSteveTimer > hitInterval) {
+                        aiSteveTimer = 0;
+                        playSound('mace');
+                        const maceDmg = botDifficulty === 'hard' ? 4 : botDifficulty === 'medium' ? 3 : 2;
+                        takeDamage(maceDmg);
+                        showActionText("AI Steve Hit You with Mace!");
+                    }
                 }
             }
         }
@@ -744,7 +817,7 @@
             remotePlayerMesh.position.set(-10, 0.5, -10);
             
             remotePlayerHealthBarMesh = createOverheadHealthBar();
-            remotePlayerHealthBarMesh.position.set(0, 2.6, 0);
+            remotePlayerHealthBarMesh.position.set(0, 2.2, 0);
             remotePlayerMesh.add(remotePlayerHealthBarMesh);
             scene.add(remotePlayerMesh);
 
