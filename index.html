@@ -3,13 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Donut SMP - End Crystal PvP</title>
+  <title>Minecraft Duel</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
       font-family: sans-serif;
+      user-select: none;
     }
+
     #crosshair {
       position: absolute;
       top: 50%;
@@ -21,150 +23,273 @@
       border-radius: 50%;
       background-color: rgba(255, 255, 255, 0.8);
       pointer-events: none;
+      z-index: 10;
     }
-    #instructions {
+
+    #game-msg {
       position: absolute;
-      top: 20px;
+      top: 60%;
       width: 100%;
       text-align: center;
+      color: #ffeb3b;
+      font-family: monospace;
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 2px 2px 0px #000;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* Hotbar Overlay */
+    #hotbar-container {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .bar-row {
+      display: flex;
+      gap: 2px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 3px;
+      border-radius: 4px;
+    }
+
+    .heart, .armor {
+      width: 16px;
+      height: 16px;
+      background-color: red;
+      clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 50% 75%, 18% 100%, 0% 38%);
+    }
+
+    .armor {
+      background-color: #90a4ae;
+      clip-path: polygon(20% 0%, 80% 0%, 100% 20%, 100% 70%, 50% 100%, 0% 70%, 0% 20%);
+    }
+
+    #hotbar {
+      display: flex;
+      background: #8b8b8b;
+      border: 4px solid #373737;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .slot {
+      width: 36px;
+      height: 36px;
+      background: #8b8b8b;
+      border: 2px solid #373737;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 18px;
+      position: relative;
+    }
+
+    .slot.active {
+      border: 2px solid #ffffff;
+    }
+
+    .item-count {
+      position: absolute;
+      bottom: 1px;
+      right: 2px;
+      font-size: 10px;
       color: #fff;
       font-weight: bold;
-      text-shadow: 1px 1px 2px #000;
-      pointer-events: none;
+      text-shadow: 1px 1px 0 #000;
     }
   </style>
-  <!-- Three.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- PointerLockControls -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
 </head>
 <body>
 
   <div id="crosshair"></div>
-  <div id="instructions">Click anywhere to start & walk on floor</div>
+  <div id="game-msg">AI Steve Shot Crossbow!</div>
+
+  <!-- HUD / Hotbar UI -->
+  <div id="hotbar-container">
+    <div style="display: flex; gap: 40px;">
+      <div class="bar-row" id="armor-bar"></div>
+      <div class="bar-row" id="health-bar"></div>
+    </div>
+    <div id="hotbar">
+      <div class="slot"><span class="item-count"></span></div>
+      <div class="slot"><span class="item-count">64</span></div>
+      <div class="slot active">🟣<span class="item-count"></span></div>
+      <div class="slot"><span class="item-count">64</span></div>
+      <div class="slot">🦯<span class="item-count"></span></div>
+      <div class="slot">🏹<span class="item-count">52</span></div>
+      <div class="slot">🗡️<span class="item-count">64</span></div>
+      <div class="slot">🟣<span class="item-count"></span></div>
+      <div class="slot"><span class="item-count"></span></div>
+    </div>
+  </div>
 
   <script>
-    // --- 1. SCENE, CAMERA, & RENDERER SETUP ---
+    // Build Health & Armor icons
+    const healthBar = document.getElementById('health-bar');
+    const armorBar = document.getElementById('armor-bar');
+    for (let i = 0; i < 10; i++) {
+      const h = document.createElement('div');
+      h.className = 'heart';
+      healthBar.appendChild(h);
+
+      const a = document.createElement('div');
+      a.className = 'armor';
+      armorBar.appendChild(a);
+    }
+
+    // --- 1. SCENE & CAMERA SETUP ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x7ec0ee); // Sky color
+    scene.background = new THREE.Color(0x6eb1ff);
 
-    const camera = new THREE.PerspectiveCamera(
-      75, 
-      window.innerWidth / window.innerHeight, 
-      0.1, 
-      1000
-    );
-
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Light
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
     scene.add(ambientLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    dirLight.position.set(20, 40, 20);
-    scene.add(dirLight);
+    const sunLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    sunLight.position.set(10, 30, 10);
+    scene.add(sunLight);
 
-    // --- 2. ARENA & FLOOR SETUP ---
+    // --- 2. ARENA GEOMETRY ---
     const FLOOR_Y = 0;
-    
+    const EYE_HEIGHT = 1.6; // Sets eye height directly on floor level
+
     // Arena Floor
-    const floorGeometry = new THREE.PlaneGeometry(100, 100);
-    const floorMaterial = new THREE.MeshLambertMaterial({ color: 0xd2b48c }); // Sand/floor color
-    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2; // Lie flat horizontally
+    const floorGeo = new THREE.CircleGeometry(40, 64);
+    const floorMat = new THREE.MeshBasicMaterial({ color: 0xd2b48c });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
+    floor.rotation.x = -Math.PI / 2;
     floor.position.y = FLOOR_Y;
     scene.add(floor);
 
-    // --- 3. CONTROLS & PLAYER CONSTANTS ---
+    // Circular Stadium Walls
+    const wallGeo = new THREE.CylinderGeometry(40, 40, 12, 64, 1, true);
+    const wallMat = new THREE.MeshLambertMaterial({ color: 0x666666, side: THREE.DoubleSide });
+    const wall = new THREE.Mesh(wallGeo, wallMat);
+    wall.position.y = 6;
+    scene.add(wall);
+
+    // Stadium Pillars / Beams
+    const pillarGeo = new THREE.BoxGeometry(1.5, 14, 1.5);
+    const pillarMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const pillarCount = 12;
+    for (let i = 0; i < pillarCount; i++) {
+      const angle = (i / pillarCount) * Math.PI * 2;
+      const p = new THREE.Mesh(pillarGeo, pillarMat);
+      p.position.set(Math.cos(angle) * 39, 7, Math.sin(angle) * 39);
+      scene.add(p);
+    }
+
+    // Outer Ring / Rim
+    const rimGeo = new THREE.TorusGeometry(40, 1, 8, 64);
+    const rimMat = new THREE.MeshLambertMaterial({ color: 0x888888 });
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.x = Math.PI / 2;
+    rim.position.y = 12;
+    scene.add(rim);
+
+    // --- 3. AI STEVE NPC ---
+    const steveGroup = new THREE.Group();
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x00a8a8 });
+    const headMat = new THREE.MeshLambertMaterial({ color: 0xc68642 });
+    const pantsMat = new THREE.MeshLambertMaterial({ color: 0x000080 });
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.8), headMat);
+    head.position.y = 2.4;
+    steveGroup.add(head);
+
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), bodyMat);
+    body.position.y = 1.4;
+    steveGroup.add(body);
+
+    const legs = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.4), pantsMat);
+    legs.position.y = 0.4;
+    steveGroup.add(legs);
+
+    steveGroup.position.set(0, 0, -10);
+    scene.add(steveGroup);
+
+    // --- 4. CONTROLS & CAMERA HEIGHT ---
     const controls = new THREE.PointerLockControls(camera, document.body);
 
-    const PLAYER_EYE_HEIGHT = 1.6; // Stand height above floor
-    const GRAVITY = 30.0;
-    const MOVE_SPEED = 12.0;
-    const JUMP_STRENGTH = 10.0;
+    // SPATIAL FIX: Spawn camera directly at floor height
+    camera.position.set(0, FLOOR_Y + EYE_HEIGHT, 12);
 
-    // Set initial spawn directly on floor level
-    camera.position.set(0, FLOOR_Y + PLAYER_EYE_HEIGHT, 15);
-
-    // Click page to activate pointer lock controls
     document.addEventListener('click', () => {
       controls.lock();
     });
 
-    // --- 4. MOVEMENT & INPUT HANDLING ---
-    let moveForward = false;
-    let moveBackward = false;
-    let moveLeft = false;
-    let moveRight = false;
-    let canJump = false;
-
+    // --- 5. MOVEMENT PHYSICS ---
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
     const velocity = new THREE.Vector3();
     const direction = new THREE.Vector3();
 
-    const onKeyDown = function (event) {
-      switch (event.code) {
-        case 'KeyW': case 'ArrowUp': moveForward = true; break;
-        case 'KeyA': case 'ArrowLeft': moveLeft = true; break;
-        case 'KeyS': case 'ArrowDown': moveBackward = true; break;
-        case 'KeyD': case 'ArrowRight': moveRight = true; break;
+    document.addEventListener('keydown', (e) => {
+      switch (e.code) {
+        case 'KeyW': moveForward = true; break;
+        case 'KeyA': moveLeft = true; break;
+        case 'KeyS': moveBackward = true; break;
+        case 'KeyD': moveRight = true; break;
         case 'Space':
-          if (canJump === true) velocity.y += JUMP_STRENGTH;
+          if (canJump) velocity.y += 10;
           canJump = false;
           break;
       }
-    };
+    });
 
-    const onKeyUp = function (event) {
-      switch (event.code) {
-        case 'KeyW': case 'ArrowUp': moveForward = false; break;
-        case 'KeyA': case 'ArrowLeft': moveLeft = false; break;
-        case 'KeyS': case 'ArrowDown': moveBackward = false; break;
-        case 'KeyD': case 'ArrowRight': moveRight = false; break;
+    document.addEventListener('keyup', (e) => {
+      switch (e.code) {
+        case 'KeyW': moveForward = false; break;
+        case 'KeyA': moveLeft = false; break;
+        case 'KeyS': moveBackward = false; break;
+        case 'KeyD': moveRight = false; break;
       }
-    };
+    });
 
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-
-    // --- 5. ANIMATION LOOP & PHYSICS ---
+    // --- 6. GAME LOOP ---
     let prevTime = performance.now();
 
     function animate() {
       requestAnimationFrame(animate);
 
       const time = performance.now();
-      const delta = (time - prevTime) / 1000; // Time step in seconds
+      const delta = (time - prevTime) / 1000;
 
-      if (controls.isLocked === true) {
-        // Friction / slowdown
+      if (controls.isLocked) {
         velocity.x -= velocity.x * 10.0 * delta;
         velocity.z -= velocity.z * 10.0 * delta;
+        velocity.y -= 30.0 * delta; // Gravity
 
-        // Apply gravity
-        velocity.y -= GRAVITY * delta;
-
-        // Determine move direction relative to camera facing
         direction.z = Number(moveForward) - Number(moveBackward);
         direction.x = Number(moveRight) - Number(moveLeft);
         direction.normalize();
 
-        if (moveForward || moveBackward) velocity.z -= direction.z * MOVE_SPEED * delta;
-        if (moveLeft || moveRight) velocity.x -= direction.x * MOVE_SPEED * delta;
+        if (moveForward || moveBackward) velocity.z -= direction.z * 15.0 * delta;
+        if (moveLeft || moveRight) velocity.x -= direction.x * 15.0 * delta;
 
-        // Move camera horizontally
         controls.moveRight(-velocity.x * delta);
         controls.moveForward(-velocity.z * delta);
-
-        // Apply vertical movement (jumping/falling)
         camera.position.y += velocity.y * delta;
 
-        // --- GROUND COLLISION CHECK ---
-        if (camera.position.y < FLOOR_Y + PLAYER_EYE_HEIGHT) {
+        // FLOOR COLLISION FIX: Locks player directly onto the ground
+        if (camera.position.y < FLOOR_Y + EYE_HEIGHT) {
           velocity.y = 0;
-          camera.position.y = FLOOR_Y + PLAYER_EYE_HEIGHT; // Snap to ground
+          camera.position.y = FLOOR_Y + EYE_HEIGHT;
           canJump = true;
         }
       }
@@ -173,7 +298,6 @@
       renderer.render(scene, camera);
     }
 
-    // Handle Window Resize
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
