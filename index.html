@@ -760,6 +760,14 @@
                     aiSteveMesh.position.y = 0.5;
                     aiSteveVerticalVel = 0;
 
+                    // Safety check to ensure bot stays on floor bounds
+                    const botDist = Math.sqrt(aiSteveMesh.position.x * aiSteveMesh.position.x + aiSteveMesh.position.z * aiSteveMesh.position.z);
+                    if (botDist > 34) {
+                        const angle = Math.atan2(aiSteveMesh.position.z, aiSteveMesh.position.x);
+                        aiSteveMesh.position.x = Math.cos(angle) * 34;
+                        aiSteveMesh.position.z = Math.sin(angle) * 34;
+                    }
+
                     if (aiSteveIsSmashing) {
                         aiSteveIsSmashing = false;
                         playSound('mace');
@@ -779,8 +787,18 @@
                 const dir = playerPos.clone().sub(aiSteveMesh.position);
                 dir.y = 0;
                 dir.normalize();
-                aiSteveMesh.position.x += dir.x * 5.0 * speedMult * delta;
-                aiSteveMesh.position.z += dir.z * 5.0 * speedMult * delta;
+
+                // Calculate next step
+                const nextX = aiSteveMesh.position.x + dir.x * 5.0 * speedMult * delta;
+                const nextZ = aiSteveMesh.position.z + dir.z * 5.0 * speedMult * delta;
+                const nextDist = Math.sqrt(nextX * nextX + nextZ * nextZ);
+
+                // Prevent bot from walking off the blocks into the void (radius limit: 34)
+                if (nextDist <= 34) {
+                    aiSteveMesh.position.x = nextX;
+                    aiSteveMesh.position.z = nextZ;
+                }
+
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
 
                 // Walking limb animation
