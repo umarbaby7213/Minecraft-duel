@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Donut SMP - End Crystal PvP</title>
+    <!-- Import Minecraft pixel font -->
+    <link href="https://fonts.cdnfonts.com/css/minecraft-4" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Minecraft', 'Courier New', Courier, monospace; }
         #game-container { width: 100vw; height: 100vh; position: relative; }
         
         /* Crosshair */
@@ -25,6 +27,29 @@
             font-size: 130px; text-shadow: 0 0 20px #ffaa00;
         }
         #totem-pop-overlay.active { transform: translate(-50%, -50%) scale(1.4); }
+
+        /* YOU DIED Death Screen Overlay */
+        #death-screen {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(170, 0, 0, 0.5); display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 25; pointer-events: auto;
+            backdrop-filter: blur(2px);
+        }
+        #death-screen h1 {
+            color: #ff0000; font-size: 64px; text-shadow: 4px 4px #3f0000, -2px -2px #000;
+            font-family: 'Minecraft', 'Courier New', monospace; font-weight: bold; margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        #death-screen p {
+            color: #ffffff; font-size: 20px; text-shadow: 2px 2px #000; margin-bottom: 25px;
+            font-family: 'Minecraft', 'Courier New', monospace;
+        }
+        .death-btn {
+            padding: 12px 30px; background: #555555; color: #ffffff; border: 2px solid #ffffff;
+            font-family: 'Minecraft', 'Courier New', monospace; font-size: 18px; font-weight: bold;
+            cursor: pointer; box-shadow: 3px 3px 0 #000;
+        }
+        .death-btn:hover { background: #777777; }
 
         /* HUD Container */
         #hud { position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; pointer-events: none; z-index: 7; }
@@ -82,8 +107,10 @@
         /* Inventory & Hotbar UI */
         #hotbar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
         #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .slot { width: 40px; height: 40px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 16px; position: relative; cursor: pointer; }
+        .slot { width: 42px; height: 42px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 16px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 8px #fff; }
+        .slot.selected-swap { border-color: #ffcc00; background: rgba(255, 204, 0, 0.4); animation: pulse 0.8s infinite alternate; }
+        @keyframes pulse { from { box-shadow: inset 0 0 4px #ffcc00; } to { box-shadow: inset 0 0 12px #ffcc00; } }
         .slot-num { position: absolute; top: 1px; left: 2px; font-size: 8px; color: #aaa; font-weight: bold; }
         .count-badge { position: absolute; bottom: 1px; right: 2px; font-size: 9px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
@@ -94,10 +121,11 @@
             padding: 15px; display: none; flex-direction: column; gap: 10px; z-index: 20;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.8); pointer-events: auto;
         }
-        #inventory-screen h3 { color: #373737; font-size: 16px; margin-bottom: 5px; text-align: center; font-weight: bold; }
+        #inventory-screen h3 { color: #373737; font-size: 15px; margin-bottom: 5px; text-align: center; font-weight: bold; font-family: 'Minecraft', monospace; }
         .inv-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #8b8b8b; padding: 6px; border: 3px solid #373737; }
         .inv-slot { width: 34px; height: 34px; background: #8b8b8b; border: 2px solid #373737; display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; position: relative; }
         .inv-slot:hover { background: #aaaaaa; }
+        .inv-slot.selected-swap { border-color: #ffcc00; background: #d4af37; }
 
         /* Mobile Controls Overlays */
         #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; z-index: 6; display: none; }
@@ -108,7 +136,7 @@
         .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         /* Action Text Overlay */
-        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; text-align: center; }
 
         /* Settings Options UI */
         .option-group { display: flex; flex-direction: column; gap: 4px; text-align: left; margin-bottom: 8px; }
@@ -118,13 +146,13 @@
         /* Start Screen Blocker */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 30; }
         #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; max-height: 90vh; overflow-y: auto; }
-        .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit; }
         .mode-btn:hover { background: #ff3377; }
-        #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
+        #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; font-family: inherit; }
         
         /* Multiplayer Buttons Group */
         .mp-btn-container { display: flex; gap: 10px; width: 100%; }
-        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; font-family: inherit; }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -138,6 +166,13 @@
         <div id="totem-pop-overlay">🗿</div>
         <div id="action-text">Arena Floor Setting Updated!</div>
 
+        <!-- Minecraft Style "YOU DIED" Overlay -->
+        <div id="death-screen">
+            <h1>You Died!</h1>
+            <p id="death-msg">You were slain in battle!</p>
+            <button class="death-btn" onclick="respawnPlayer()">Respawn</button>
+        </div>
+
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
         <div id="mobile-buttons">
@@ -149,9 +184,11 @@
 
         <!-- Full Inventory GUI Screen -->
         <div id="inventory-screen">
-            <h3>PLAYER INVENTORY (Press E to Close)</h3>
+            <h3>INVENTORY (Click 2 items to Swap)</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
-            <p style="font-size: 11px; color: #333; text-align: center; margin-top: 5px;">Click any item to refill hotbar slot to 64!</p>
+            <p style="font-size: 10px; color: #333; text-align: center; margin-top: 5px; font-family: 'Minecraft', monospace;">
+                Click any slot then another to SWAP items! Press 1-9 on hotbar to swap instantly!
+            </p>
         </div>
 
         <!-- HUD -->
@@ -185,17 +222,7 @@
 
             <!-- Hotbar (9 Slots) -->
             <div id="hotbar-wrapper">
-                <div id="hotbar">
-                    <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
-                    <div class="slot" id="slot-2" onclick="selectSlot(2)"><span class="slot-num">2</span><div class="pixel-gapple"></div><span class="count-badge" id="gapple-count">64</span></div>
-                    <div class="slot" id="slot-3" onclick="selectSlot(3)"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
-                    <div class="slot" id="slot-4" onclick="selectSlot(4)"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
-                    <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">64</span></div>
-                    <div class="slot" id="slot-6" onclick="selectSlot(6)"><span class="slot-num">6</span>🏹<span class="count-badge" id="arrow-count">64</span></div>
-                    <div class="slot" id="slot-7" onclick="selectSlot(7)"><span class="slot-num">7</span>🚀<span class="count-badge" id="firework-count">64</span></div>
-                    <div class="slot" id="slot-8" onclick="selectSlot(8)"><span class="slot-num">8</span>🔨<span class="count-badge" id="mace-count">64</span></div>
-                    <div class="slot" id="slot-9" onclick="selectSlot(9)"><span class="slot-num">9</span>🟣<span class="count-badge" id="enderpearl-count">64</span></div>
-                </div>
+                <div id="hotbar"></div>
             </div>
         </div>
 
@@ -260,12 +287,48 @@
         let currentSlot = 1; 
         let playerHealth = 10;
         const maxHealth = 10;
+        let playerTotems = 64;
+        let isDead = false;
+        let swapSourceIndex = null; // For inventory item swapping
+
         let textTimeout = null;
         let isInventoryOpen = false;
 
-        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64, mace: 64, enderpearl: 64 };
-        let isGliding = false;
+        // Inventory Items State (Hotbar slots 0..8, Inventory slots 9..26)
+        const ITEM_TYPES = {
+            sword: { name: 'Sword', icon: '🗡️' },
+            gapple: { name: 'Gapple', icon: '<div class="pixel-gapple"></div>' },
+            crystal: { name: 'Crystal', icon: '🔮' },
+            obsidian: { name: 'Obsidian', icon: '⬛' },
+            totem: { name: 'Totem', icon: '🗿' },
+            arrow: { name: 'Arrow', icon: '🏹' },
+            firework: { name: 'Firework', icon: '🚀' },
+            mace: { name: 'Mace', icon: '🔨' },
+            enderpearl: { name: 'Ender Pearl', icon: '🟣' }
+        };
 
+        // 27 Total slots (0-8: Hotbar, 9-26: Main Inventory)
+        let inventorySlots = [
+            // Default Hotbar (0 to 8)
+            { type: 'sword', count: 1 },
+            { type: 'gapple', count: 64 },
+            { type: 'crystal', count: 64 },
+            { type: 'obsidian', count: 64 },
+            { type: 'totem', count: 64 },
+            { type: 'arrow', count: 64 },
+            { type: 'firework', count: 64 },
+            { type: 'mace', count: 64 },
+            { type: 'enderpearl', count: 64 },
+            // Extra Inventory (9 to 26)
+            { type: 'enderpearl', count: 64 }, { type: 'mace', count: 64 }, { type: 'crystal', count: 64 },
+            { type: 'obsidian', count: 64 }, { type: 'totem', count: 64 }, { type: 'gapple', count: 64 },
+            { type: 'arrow', count: 64 }, { type: 'firework', count: 64 }, { type: 'sword', count: 1 },
+            { type: 'crystal', count: 64 }, { type: 'obsidian', count: 64 }, { type: 'totem', count: 64 },
+            { type: 'gapple', count: 64 }, { type: 'arrow', count: 64 }, { type: 'firework', count: 64 },
+            { type: 'enderpearl', count: 64 }, { type: 'mace', count: 64 }, { type: 'crystal', count: 64 }
+        ];
+
+        let isGliding = false;
         let gameMode = 'none';
         let peer = null, peerConn = null;
         let remotePlayerMesh = null;
@@ -282,7 +345,7 @@
         let aiSteveIsSmashing = false;
         let aiSteveWalkAnimTimer = 0;
 
-        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh;
+        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh, obsidianMesh;
 
         const activeArrows = [];
         const activeEnderPearls = [];
@@ -427,7 +490,8 @@
             spawnDummyTargets();
             setupControls();
             setupMouseInteraction();
-            populateFullInventoryGUI();
+            renderHotbarUI();
+            renderInventoryGUI();
 
             if (isMobile) setupMobileTouchControls();
 
@@ -445,33 +509,93 @@
             }
         }
 
-        function populateFullInventoryGUI() {
+        /* Inventory & Hotbar Slot Management */
+        function renderHotbarUI() {
+            const hotbarEl = document.getElementById('hotbar');
+            hotbarEl.innerHTML = '';
+
+            for (let i = 0; i < 9; i++) {
+                const item = inventorySlots[i];
+                const slotDiv = document.createElement('div');
+                slotDiv.className = `slot ${i + 1 === currentSlot ? 'active' : ''} ${swapSourceIndex === i ? 'selected-swap' : ''}`;
+                slotDiv.id = `slot-${i + 1}`;
+                
+                let iconHtml = '';
+                let countHtml = '';
+                if (item && item.type) {
+                    const info = ITEM_TYPES[item.type];
+                    iconHtml = info ? info.icon : '';
+                    if (item.count > 1) {
+                        countHtml = `<span class="count-badge">${item.count}</span>`;
+                    }
+                }
+
+                slotDiv.innerHTML = `<span class="slot-num">${i + 1}</span>${iconHtml}${countHtml}`;
+                slotDiv.onclick = (e) => {
+                    e.stopPropagation();
+                    if (isInventoryOpen && swapSourceIndex !== null) {
+                        swapSlots(swapSourceIndex, i);
+                    } else {
+                        selectSlot(i + 1);
+                    }
+                };
+                hotbarEl.appendChild(slotDiv);
+            }
+            updateHeldItemVisibility();
+        }
+
+        function renderInventoryGUI() {
             const container = document.getElementById('inv-grid-container');
             container.innerHTML = '';
 
-            const items = [
-                { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }
-            ];
-
-            items.forEach(item => {
+            // Main Inventory (Slots 9..26)
+            for (let i = 9; i < 27; i++) {
+                const item = inventorySlots[i];
                 const slot = document.createElement('div');
-                slot.className = 'inv-slot';
-                slot.innerHTML = `${item.icon}<span class="count-badge">64</span>`;
-                slot.onclick = () => {
-                    counts[item.type] = 64;
-                    const badgeId = `${item.type}-count`;
-                    const badge = document.getElementById(badgeId);
-                    if (badge) badge.innerText = 64;
-                    showActionText(`Refilled ${item.type.toUpperCase()} to 64!`);
-                };
+                slot.className = `inv-slot ${swapSourceIndex === i ? 'selected-swap' : ''}`;
+                
+                let iconHtml = '';
+                let countHtml = '';
+                if (item && item.type) {
+                    const info = ITEM_TYPES[item.type];
+                    iconHtml = info ? info.icon : '';
+                    if (item.count > 1) {
+                        countHtml = `<span class="count-badge">${item.count}</span>`;
+                    }
+                }
+
+                slot.innerHTML = `${iconHtml}${countHtml}`;
+                slot.onclick = () => handleSlotClick(i);
                 container.appendChild(slot);
-            });
+            }
+        }
+
+        function handleSlotClick(index) {
+            if (swapSourceIndex === null) {
+                swapSourceIndex = index;
+                showActionText(`Selected ${getItemName(index)} to Swap! Click target slot.`);
+            } else {
+                swapSlots(swapSourceIndex, index);
+            }
+            renderHotbarUI();
+            renderInventoryGUI();
+        }
+
+        function swapSlots(idx1, idx2) {
+            const temp = inventorySlots[idx1];
+            inventorySlots[idx1] = inventorySlots[idx2];
+            inventorySlots[idx2] = temp;
+
+            showActionText(`Swapped Items!`);
+            swapSourceIndex = null;
+            renderHotbarUI();
+            renderInventoryGUI();
+        }
+
+        function getItemName(index) {
+            const item = inventorySlots[index];
+            if (!item || !item.type || !ITEM_TYPES[item.type]) return 'Empty Slot';
+            return ITEM_TYPES[item.type].name;
         }
 
         function toggleInventory() {
@@ -482,8 +606,46 @@
                 if (!isMobile) controls.unlock();
             } else {
                 invScreen.style.display = 'none';
+                swapSourceIndex = null;
+                renderHotbarUI();
+                renderInventoryGUI();
                 if (!isMobile) controls.lock();
             }
+        }
+
+        /* Player Death & Respawn Logic */
+        function triggerDeath(killerName = "Enemy") {
+            if (isDead) return;
+            isDead = true;
+            playSound('explode');
+
+            document.getElementById('death-msg').innerText = `You were slain by ${killerName}!`;
+            document.getElementById('death-screen').style.display = 'flex';
+
+            if (!isMobile) controls.unlock();
+
+            // Notify Peer JS client if in multiplayer mode
+            if (gameMode === 'mp' && peerConn && peerConn.open) {
+                peerConn.send({ type: 'died' });
+            }
+        }
+
+        function respawnPlayer() {
+            isDead = false;
+            playerHealth = maxHealth;
+            updateHeartsUI();
+            document.getElementById('death-screen').style.display = 'none';
+
+            // Reset player position to spawn arena center
+            controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
+            velocity.set(0, 0, 0);
+
+            // Refill items
+            inventorySlots.forEach(s => { if (s && s.type !== 'sword') s.count = 64; });
+            renderHotbarUI();
+
+            if (!isMobile) controls.lock();
+            showActionText("Respawned! Ready for Battle!");
         }
 
         /* Fully Detailed Blocky Minecraft Character Rig Standing On Floor */
@@ -682,7 +844,7 @@
                     showActionText(`AI STEVE POPPED A TOTEM! (${aiSteveTotems} left)`);
                 } else {
                     playSound('explode');
-                    showActionText("YOU KILLED AI STEVE!");
+                    showActionText("AI STEVE DIED!");
                     scene.remove(aiSteveMesh);
                     aiSteveMesh = null;
 
@@ -697,6 +859,64 @@
                 }
             }
             updateSteveHealthBarUI();
+        }
+
+        function takeDamage(amount, attackerName = "Enemy") {
+            if (isDead) return;
+            playerHealth -= amount;
+
+            const flash = document.getElementById('flash-overlay');
+            flash.style.background = 'rgba(255, 0, 0, 0.4)';
+            setTimeout(() => { flash.style.background = 'rgba(255, 0, 0, 0)'; }, 100);
+
+            if (playerHealth <= 0) {
+                let totemSlotIndex = inventorySlots.findIndex(s => s && s.type === 'totem' && s.count > 0);
+                if (totemSlotIndex !== -1) {
+                    inventorySlots[totemSlotIndex].count--;
+                    if (inventorySlots[totemSlotIndex].count <= 0) {
+                        inventorySlots[totemSlotIndex] = { type: null, count: 0 };
+                    }
+                    playerHealth = maxHealth;
+                    playSound('totem');
+
+                    const totemOverlay = document.getElementById('totem-pop-overlay');
+                    totemOverlay.classList.add('active');
+                    setTimeout(() => totemOverlay.classList.remove('active'), 1000);
+
+                    showActionText("TOTEM POPPED! SAVED FROM DEATH!");
+                    renderHotbarUI();
+                } else {
+                    triggerDeath(attackerName);
+                }
+            }
+            updateHeartsUI();
+        }
+
+        function updateHeartsUI() {
+            const container = document.getElementById('hearts-container');
+            container.innerHTML = '';
+            for (let i = 0; i < maxHealth; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'heart-wrapper';
+                const heart = document.createElement('div');
+                heart.className = `pixel-heart ${i >= playerHealth ? 'empty' : ''}`;
+                wrapper.appendChild(heart);
+                container.appendChild(wrapper);
+            }
+        }
+
+        function eatGoldenApple() {
+            const slotItem = inventorySlots[currentSlot - 1];
+            if (!slotItem || slotItem.type !== 'gapple' || slotItem.count <= 0) return;
+
+            slotItem.count--;
+            if (slotItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+
+            playerHealth = Math.min(maxHealth, playerHealth + 4);
+            updateHeartsUI();
+            playSound('eat');
+            showActionText("Ate Golden Apple! (+4 HP)");
+            renderHotbarUI();
         }
 
         function shootAICrossbow() {
@@ -756,7 +976,6 @@
                     aiSteveMesh.position.y = 0.5;
                     aiSteveVerticalVel = 0;
 
-                    // Safety check to ensure bot stays on floor bounds
                     const botDist = Math.sqrt(aiSteveMesh.position.x * aiSteveMesh.position.x + aiSteveMesh.position.z * aiSteveMesh.position.z);
                     if (botDist > 34) {
                         const angle = Math.atan2(aiSteveMesh.position.z, aiSteveMesh.position.x);
@@ -771,7 +990,7 @@
 
                         if (dist < 4.0) {
                             const smashDmg = botDifficulty === 'hard' ? 7 : botDifficulty === 'medium' ? 5 : 3;
-                            takeDamage(smashDmg);
+                            takeDamage(smashDmg, "AI Steve");
                             showActionText("AI STEVE LANDED A MACE SMASH ATTACK!");
                         }
                     }
@@ -784,12 +1003,10 @@
                 dir.y = 0;
                 dir.normalize();
 
-                // Calculate next step
                 const nextX = aiSteveMesh.position.x + dir.x * 5.0 * speedMult * delta;
                 const nextZ = aiSteveMesh.position.z + dir.z * 5.0 * speedMult * delta;
                 const nextDist = Math.sqrt(nextX * nextX + nextZ * nextZ);
 
-                // Prevent bot from walking off the blocks into the void (radius limit: 34)
                 if (nextDist <= 34) {
                     aiSteveMesh.position.x = nextX;
                     aiSteveMesh.position.z = nextZ;
@@ -797,7 +1014,6 @@
 
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
 
-                // Walking limb animation
                 aiSteveWalkAnimTimer += delta * 10 * speedMult;
                 const swing = Math.sin(aiSteveWalkAnimTimer) * 0.6;
                 if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = swing;
@@ -805,7 +1021,6 @@
                 if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = -swing;
                 if (parts.rightArmPivot) parts.rightArmPivot.rotation.x = swing;
             } else {
-                // Standing default posture
                 if (parts.leftLegPivot) parts.leftLegPivot.rotation.x = 0;
                 if (parts.rightLegPivot) parts.rightLegPivot.rotation.x = 0;
                 if (parts.leftArmPivot) parts.leftArmPivot.rotation.x = 0;
@@ -817,7 +1032,7 @@
                         aiSteveTimer = 0;
                         playSound('mace');
                         const maceDmg = botDifficulty === 'hard' ? 4 : botDifficulty === 'medium' ? 3 : 2;
-                        takeDamage(maceDmg);
+                        takeDamage(maceDmg, "AI Steve");
                         showActionText("AI Steve Hit You with Mace!");
                     }
                 }
@@ -901,15 +1116,16 @@
                 if (data.type === 'pos') {
                     if (remotePlayerMesh) remotePlayerMesh.position.set(data.x, data.y - PLAYER_EYE_HEIGHT, data.z);
                 } else if (data.type === 'obsidian') {
-                    placeObsidianBlock(data.x, data.y, data.z);
+                    placeObsidianBlock(data.x, data.y, data.z, true);
                 } else if (data.type === 'crystal') {
-                    placeEndCrystal(data.x, data.y, data.z);
+                    placeEndCrystal(data.x, data.y, data.z, true);
                 } else if (data.type === 'damage') {
                     damageRemotePlayer(data.amount);
                     if (remotePlayerMesh) spawnParticleExplosion(remotePlayerMesh.position);
                 } else if (data.type === 'hit_me') {
-                    takeDamage(data.damage || 3);
-                    showActionText("Hit by Enemy Player!");
+                    takeDamage(data.damage || 3, "Enemy Player");
+                } else if (data.type === 'died') {
+                    showActionText("ENEMY DIED! YOU WIN!");
                 }
             });
         }
@@ -1115,6 +1331,15 @@
             enderpearlMesh.position.set(0.35, -0.35, -0.5);
             enderpearlMesh.visible = false;
             camera.add(enderpearlMesh);
+
+            obsidianMesh = new THREE.Group();
+            const obsBlockGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+            const obsBlockMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.4 });
+            const obsBlock = new THREE.Mesh(obsBlockGeo, obsBlockMat);
+            obsidianMesh.add(obsBlock);
+            obsidianMesh.position.set(0.35, -0.35, -0.5);
+            obsidianMesh.visible = false;
+            camera.add(obsidianMesh);
         }
 
         function createEndCrystalMesh() {
@@ -1152,16 +1377,18 @@
 
         function setupControls() {
             document.addEventListener('keydown', (e) => {
+                if (isDead) return;
                 switch (e.code) {
                     case 'KeyW': moveForward = true; break;
                     case 'KeyS': moveBackward = true; break;
                     case 'KeyA': moveRight = true; break;
                     case 'KeyD': moveLeft = true; break;
                     case 'Space': 
+                        const activeItem = inventorySlots[currentSlot - 1];
                         if (canJump) { 
                             velocity.y += 11.0; 
                             canJump = false; 
-                        } else if (currentSlot === 7 && !isGliding && controls.getObject().position.y > 3.0) {
+                        } else if (activeItem && activeItem.type === 'firework' && !isGliding && controls.getObject().position.y > 3.0) {
                             isGliding = true;
                             showActionText("Elytra Gliding Activated!");
                         }
@@ -1189,6 +1416,7 @@
             });
 
             document.addEventListener('wheel', (e) => {
+                if (isInventoryOpen) return;
                 if (e.deltaY > 0) selectSlot(currentSlot % 9 + 1);
                 else selectSlot((currentSlot - 2 + 9) % 9 + 1);
             });
@@ -1201,6 +1429,7 @@
             joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
 
             window.addEventListener('touchstart', (e) => {
+                if (isDead) return;
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
                     if (touch.clientX < window.innerWidth / 2 && touchMoveID === null) {
@@ -1274,10 +1503,12 @@
 
             document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                if (isDead) return;
+                const activeItem = inventorySlots[currentSlot - 1];
                 if (canJump) { 
                     velocity.y += 11.0; 
                     canJump = false; 
-                } else if (currentSlot === 7 && !isGliding) {
+                } else if (activeItem && activeItem.type === 'firework' && !isGliding) {
                     isGliding = true;
                     showActionText("Elytra Gliding!");
                 }
@@ -1285,35 +1516,35 @@
 
             document.getElementById('btn-hit').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                handleLeftClick();
+                if (!isDead) handleLeftClick();
             });
 
             document.getElementById('btn-place').addEventListener('touchstart', (e) => {
                 e.preventDefault();
-                handleRightClick();
+                if (!isDead) handleRightClick();
             });
         }
 
         function selectSlot(slotNum) {
             currentSlot = slotNum;
-            for (let i = 1; i <= 9; i++) {
-                const el = document.getElementById(`slot-${i}`);
-                if (el) {
-                    if (i === slotNum) el.classList.add('active');
-                    else el.classList.remove('active');
-                }
-            }
+            renderHotbarUI();
+        }
 
-            swordMesh.visible = (currentSlot === 1);
-            heldTotemMesh.visible = (currentSlot === 5);
-            crossbowMesh.visible = (currentSlot === 6);
-            maceMesh.visible = (currentSlot === 8);
-            enderpearlMesh.visible = (currentSlot === 9);
+        function updateHeldItemVisibility() {
+            const activeItem = inventorySlots[currentSlot - 1];
+            const activeType = activeItem ? activeItem.type : null;
+
+            swordMesh.visible = (activeType === 'sword');
+            heldTotemMesh.visible = (activeType === 'totem');
+            crossbowMesh.visible = (activeType === 'arrow');
+            maceMesh.visible = (activeType === 'mace');
+            enderpearlMesh.visible = (activeType === 'enderpearl');
+            obsidianMesh.visible = (activeType === 'obsidian');
         }
 
         function setupMouseInteraction() {
             document.addEventListener('mousedown', (e) => {
-                if (isInventoryOpen) return;
+                if (isInventoryOpen || isDead) return;
                 if (!controls.isLocked && !isMobile) return;
                 if (e.button === 0) handleLeftClick();
                 else if (e.button === 2) handleRightClick();
@@ -1341,9 +1572,12 @@
         }
 
         function shootCrossbow() {
-            if (counts.arrow <= 0) return;
-            counts.arrow--;
-            document.getElementById('arrow-count').innerText = counts.arrow;
+            const activeItem = inventorySlots[currentSlot - 1];
+            if (!activeItem || activeItem.type !== 'arrow' || activeItem.count <= 0) return;
+
+            activeItem.count--;
+            if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+            renderHotbarUI();
 
             playSound('shoot');
 
@@ -1365,9 +1599,12 @@
         }
 
         function throwEnderPearl() {
-            if (counts.enderpearl <= 0) return;
-            counts.enderpearl--;
-            document.getElementById('enderpearl-count').innerText = counts.enderpearl;
+            const activeItem = inventorySlots[currentSlot - 1];
+            if (!activeItem || activeItem.type !== 'enderpearl' || activeItem.count <= 0) return;
+
+            activeItem.count--;
+            if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+            renderHotbarUI();
 
             playSound('pearl');
 
@@ -1390,9 +1627,12 @@
         }
 
         function useFireworkBoost() {
-            if (counts.firework <= 0) return;
-            counts.firework--;
-            document.getElementById('firework-count').innerText = counts.firework;
+            const activeItem = inventorySlots[currentSlot - 1];
+            if (!activeItem || activeItem.type !== 'firework' || activeItem.count <= 0) return;
+
+            activeItem.count--;
+            if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+            renderHotbarUI();
 
             playSound('firework');
 
@@ -1409,10 +1649,14 @@
         }
 
         function handleLeftClick() {
-            if (currentSlot === 1) swingSwordAnimation();
-            else if (currentSlot === 6) { shootCrossbow(); return; }
-            else if (currentSlot === 8) swingMaceAnimation();
-            else if (currentSlot === 9) { throwEnderPearl(); return; }
+            if (isDead) return;
+            const activeItem = inventorySlots[currentSlot - 1];
+            const activeType = activeItem ? activeItem.type : null;
+
+            if (activeType === 'sword') swingSwordAnimation();
+            else if (activeType === 'arrow') { shootCrossbow(); return; }
+            else if (activeType === 'mace') swingMaceAnimation();
+            else if (activeType === 'enderpearl') { throwEnderPearl(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -1424,8 +1668,8 @@
                 return;
             }
 
-            const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
-            const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
+            const fallDamageBonus = activeType === 'mace' ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
+            const baseDmg = activeType === 'mace' ? Math.round(5 * fallDamageBonus) : 3;
 
             if (broPlayerMesh || remotePlayerMesh) {
                 const targetBro = broPlayerMesh || remotePlayerMesh;
@@ -1457,9 +1701,13 @@
         }
 
         function handleRightClick() {
-            if (currentSlot === 2) { eatGoldenApple(); return; }
-            if (currentSlot === 7) { useFireworkBoost(); return; }
-            if (currentSlot === 9) { throwEnderPearl(); return; }
+            if (isDead) return;
+            const activeItem = inventorySlots[currentSlot - 1];
+            const activeType = activeItem ? activeItem.type : null;
+
+            if (activeType === 'gapple') { eatGoldenApple(); return; }
+            if (activeType === 'firework') { useFireworkBoost(); return; }
+            if (activeType === 'enderpearl') { throwEnderPearl(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             const intersects = raycaster.intersectObjects(placeableObjects, false);
@@ -1471,19 +1719,25 @@
                 const gridY = Math.round(point.y);
                 const gridZ = Math.round(point.z);
 
-                if (currentSlot === 4 && counts.obsidian > 0) {
+                if (activeType === 'obsidian' && activeItem.count > 0) {
                     placeObsidianBlock(gridX, gridY, gridZ);
                     if (peerConn && peerConn.open) peerConn.send({ type: 'obsidian', x: gridX, y: gridY, z: gridZ });
-                } else if (currentSlot === 3 && counts.crystal > 0) {
+                } else if (activeType === 'crystal' && activeItem.count > 0) {
                     placeEndCrystal(gridX, gridY, gridZ);
                     if (peerConn && peerConn.open) peerConn.send({ type: 'crystal', x: gridX, y: gridY, z: gridZ });
                 }
             }
         }
 
-        function placeObsidianBlock(x, y, z) {
-            counts.obsidian--;
-            document.getElementById('obsidian-count').innerText = counts.obsidian;
+        function placeObsidianBlock(x, y, z, isRemote = false) {
+            if (!isRemote) {
+                const activeItem = inventorySlots[currentSlot - 1];
+                if (!activeItem || activeItem.type !== 'obsidian' || activeItem.count <= 0) return;
+                activeItem.count--;
+                if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+                renderHotbarUI();
+            }
+
             playSound('place');
 
             const obsGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -1496,9 +1750,15 @@
             solidColliders.push(mesh);
         }
 
-        function placeEndCrystal(x, y, z) {
-            counts.crystal--;
-            document.getElementById('crystal-count').innerText = counts.crystal;
+        function placeEndCrystal(x, y, z, isRemote = false) {
+            if (!isRemote) {
+                const activeItem = inventorySlots[currentSlot - 1];
+                if (!activeItem || activeItem.type !== 'crystal' || activeItem.count <= 0) return;
+                activeItem.count--;
+                if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+                renderHotbarUI();
+            }
+
             playSound('place');
 
             const crystal = createEndCrystalMesh();
@@ -1518,233 +1778,191 @@
             const dist = camera.position.distanceTo(crystalObj.position);
             if (dist < 6.0) {
                 const dmg = Math.round((6.0 - dist) * 1.5) + 3;
-                takeDamage(dmg);
+                takeDamage(dmg, "End Crystal Explosion");
                 showActionText(`BOOM! End Crystal Damage (-${dmg} HP)`);
             }
         }
 
-        function eatGoldenApple() {
-            if (counts.gapple <= 0) return;
-            counts.gapple--;
-            document.getElementById('gapple-count').innerText = counts.gapple;
-            playSound('eat');
-
-            playerHealth = Math.min(maxHealth, playerHealth + 4);
-            updateHeartsUI();
-            showActionText("Ate Golden Apple (+4 Health)");
-        }
-
-        function takeDamage(amount) {
-            playerHealth -= amount;
-            updateHeartsUI();
-
-            const flash = document.getElementById('flash-overlay');
-            flash.style.background = 'rgba(255, 0, 0, 0.4)';
-            setTimeout(() => { flash.style.background = 'rgba(255, 0, 0, 0)'; }, 100);
-
-            if (playerHealth <= 0) {
-                if (counts.totem > 0) {
-                    counts.totem--;
-                    document.getElementById('totem-count').innerText = counts.totem;
-                    playerHealth = maxHealth;
-                    updateHeartsUI();
-                    playSound('totem');
-
-                    const pop = document.getElementById('totem-pop-overlay');
-                    pop.classList.add('active');
-                    setTimeout(() => pop.classList.remove('active'), 500);
-                    showActionText("TOTEM OF UNDYING SAVED YOU!");
-                } else {
-                    showActionText("YOU DIED! Respawning...");
-                    playerHealth = maxHealth;
-                    counts.totem = 64;
-                    document.getElementById('totem-count').innerText = 64;
-                    updateHeartsUI();
-                    controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
-                }
-            }
-        }
-
-        function updateHeartsUI() {
-            const container = document.getElementById('hearts-container');
-            container.innerHTML = '';
-            for (let i = 0; i < maxHealth; i++) {
-                const wrapper = document.createElement('div');
-                wrapper.className = 'heart-wrapper';
-                const heart = document.createElement('div');
-                heart.className = 'pixel-heart';
-                if (i >= playerHealth) heart.classList.add('empty');
-                wrapper.appendChild(heart);
-                container.appendChild(wrapper);
-            }
-        }
-
         function spawnParticleExplosion(pos) {
-            const pCount = 20;
-            const pGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-            const pMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+            const particleCount = 20;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const velocities = [];
 
-            for (let i = 0; i < pCount; i++) {
-                const p = new THREE.Mesh(pGeo, pMat);
-                p.position.copy(pos);
-                scene.add(p);
+            for (let i = 0; i < particleCount; i++) {
+                positions[i * 3] = pos.x;
+                positions[i * 3 + 1] = pos.y + 0.5;
+                positions[i * 3 + 2] = pos.z;
 
-                const v = new THREE.Vector3(
-                    (Math.random() - 0.5) * 10,
-                    Math.random() * 10,
-                    (Math.random() - 0.5) * 10
-                );
-                particleSystems.push({ mesh: p, vel: v, life: 0.6 });
+                velocities.push(new THREE.Vector3(
+                    (Math.random() - 0.5) * 8.0,
+                    Math.random() * 6.0 + 2.0,
+                    (Math.random() - 0.5) * 8.0
+                ));
             }
+
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.25 });
+            const pSystem = new THREE.Points(geo, mat);
+
+            scene.add(pSystem);
+            particleSystems.push({ system: pSystem, vels: velocities, age: 0 });
         }
 
-        function showActionText(text) {
+        function showActionText(msg) {
             const el = document.getElementById('action-text');
-            el.innerText = text;
+            el.innerText = msg;
             el.style.opacity = '1';
-            clearTimeout(textTimeout);
-            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
+            if (textTimeout) clearTimeout(textTimeout);
+            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2200);
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
             const time = performance.now();
-            const delta = (time - prevTime) / 1000;
+            const delta = Math.min((time - prevTime) / 1000, 0.1);
             prevTime = time;
 
-            if (controls.isLocked || isMobile) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
+            if (!isDead) {
+                // Crystal Float Rotation Animation
+                endCrystals.forEach(c => {
+                    const outer = c.userData.outerCrystal;
+                    if (outer) {
+                        outer.rotation.y += 0.03;
+                        outer.position.y = 0.85 + Math.sin(time * 0.003 + c.userData.floatOffset) * 0.1;
+                    }
+                });
 
-                if (!isGliding) {
-                    velocity.y -= 28.0 * delta;
-                } else {
-                    velocity.y -= 5.0 * delta;
-                    velocity.z += 10.0 * delta;
-                }
+                // Ender Pearls Projectiles Update
+                for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
+                    const pearlData = activeEnderPearls[i];
+                    pearlData.age += delta;
 
-                const direction = new THREE.Vector3();
-                camera.getWorldDirection(direction);
-                direction.y = 0;
-                direction.normalize();
+                    pearlData.velocity.y -= 18.0 * delta; // Gravity
+                    pearlData.mesh.position.addScaledVector(pearlData.velocity, delta);
 
-                const sideDirection = new THREE.Vector3(-direction.z, 0, direction.x);
+                    if (pearlData.mesh.position.y <= 0.5 || pearlData.age > 4.0) {
+                        // Teleport player to pearl landing position!
+                        controls.getObject().position.set(
+                            pearlData.mesh.position.x,
+                            Math.max(0.5, pearlData.mesh.position.y) + PLAYER_EYE_HEIGHT,
+                            pearlData.mesh.position.z
+                        );
 
-                let moveSpeed = isGliding ? 25.0 : 12.0;
-                if (moveForward) velocity.add(direction.clone().multiplyScalar(moveSpeed * delta * 10));
-                if (moveBackward) velocity.add(direction.clone().multiplyScalar(-moveSpeed * delta * 10));
-                if (moveLeft) velocity.add(sideDirection.clone().multiplyScalar(moveSpeed * delta * 10));
-                if (moveRight) velocity.add(sideDirection.clone().multiplyScalar(-moveSpeed * delta * 10));
+                        takeDamage(1, "Ender Pearl Fall"); // Pearl teleport self damage
+                        playSound('pearl');
+                        spawnParticleExplosion(pearlData.mesh.position);
 
-                const camObj = controls.getObject();
-                const oldPos = camObj.position.clone();
-
-                camObj.position.x += velocity.x * delta;
-                camObj.position.z += velocity.z * delta;
-
-                const playerRadius = 0.4;
-                const distFromCenter = Math.sqrt(camObj.position.x * camObj.position.x + camObj.position.z * camObj.position.z);
-                const arenaRadius = 35;
-
-                const isInVoid = distFromCenter > arenaRadius;
-
-                if (!isInVoid) {
-                    for (let i = 0; i < solidColliders.length; i++) {
-                        const box = solidColliders[i];
-                        const boxPos = box.position;
-                        const boxScale = box.scale;
-
-                        const minX = boxPos.x - boxScale.x / 2 - playerRadius;
-                        const maxX = boxPos.x + boxScale.x / 2 + playerRadius;
-                        const minZ = boxPos.z - boxScale.z / 2 - playerRadius;
-                        const maxZ = boxPos.z + boxScale.z / 2 + playerRadius;
-                        const minY = boxPos.y - boxScale.y / 2 - PLAYER_EYE_HEIGHT;
-                        const maxY = boxPos.y + boxScale.y / 2 + PLAYER_EYE_HEIGHT;
-
-                        if (camObj.position.x > minX && camObj.position.x < maxX &&
-                            camObj.position.z > minZ && camObj.position.z < maxZ &&
-                            camObj.position.y > minY && camObj.position.y < maxY) {
-                            camObj.position.x = oldPos.x;
-                            camObj.position.z = oldPos.z;
-                            velocity.x = 0;
-                            velocity.z = 0;
-                            break;
-                        }
+                        scene.remove(pearlData.mesh);
+                        activeEnderPearls.splice(i, 1);
+                        showActionText("Ender Pearl Teleported You!");
                     }
                 }
 
-                camObj.position.y += velocity.y * delta;
+                // Crossbow Rocket Arrows Update
+                for (let i = activeArrows.length - 1; i >= 0; i--) {
+                    const arrow = activeArrows[i];
+                    arrow.age += delta;
+                    arrow.mesh.position.addScaledVector(arrow.dir, delta);
 
-                const floorLimit = isInVoid ? -50.0 : 0.5 + PLAYER_EYE_HEIGHT;
-
-                if (camObj.position.y <= floorLimit) {
-                    if (isInVoid) {
-                        showActionText("FALLEN INTO THE VOID!");
-                        takeDamage(maxHealth);
-                        camObj.position.set(0, 15, 0);
-                        velocity.set(0, 0, 0);
-                        isGliding = false;
+                    let hitDetected = false;
+                    if (arrow.isFromBot) {
+                        const distToPlayer = arrow.mesh.position.distanceTo(camera.position);
+                        if (distToPlayer < 1.2) {
+                            hitDetected = true;
+                            takeDamage(3, "AI Steve");
+                            showActionText("Hit by AI Steve's Crossbow!");
+                        }
                     } else {
-                        camObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
+                        if (aiSteveMesh) {
+                            const distToSteve = arrow.mesh.position.distanceTo(aiSteveMesh.position);
+                            if (distToSteve < 1.4) {
+                                hitDetected = true;
+                                damageAISteve(4);
+                                showActionText("Rocket Arrow Hit AI Steve!");
+                            }
+                        }
+                    }
+
+                    if (hitDetected || arrow.mesh.position.y <= 0 || arrow.age > 3.0) {
+                        spawnParticleExplosion(arrow.mesh.position);
+                        scene.remove(arrow.mesh);
+                        activeArrows.splice(i, 1);
+                    }
+                }
+
+                // Particle System Physics Update
+                for (let i = particleSystems.length - 1; i >= 0; i--) {
+                    const ps = particleSystems[i];
+                    ps.age += delta;
+                    const posAttr = ps.system.geometry.attributes.position;
+
+                    for (let j = 0; j < ps.vels.length; j++) {
+                        ps.vels[j].y -= 9.8 * delta;
+                        posAttr.setXYZ(
+                            j,
+                            posAttr.getX(j) + ps.vels[j].x * delta,
+                            posAttr.getY(j) + ps.vels[j].y * delta,
+                            posAttr.getZ(j) + ps.vels[j].z * delta
+                        );
+                    }
+                    posAttr.needsUpdate = true;
+
+                    if (ps.age > 0.8) {
+                        scene.remove(ps.system);
+                        particleSystems.splice(i, 1);
+                    }
+                }
+
+                // Player Movement Physics
+                if (controls.isLocked || isMobile) {
+                    velocity.x -= velocity.x * 10.0 * delta;
+                    velocity.z -= velocity.z * 10.0 * delta;
+
+                    if (isGliding) {
+                        velocity.y -= 3.0 * delta;
+                    } else {
+                        velocity.y -= 25.0 * delta;
+                    }
+
+                    const moveDir = new THREE.Vector3();
+                    if (moveForward) moveDir.z -= 1;
+                    if (moveBackward) moveDir.z += 1;
+                    if (moveLeft) moveDir.x -= 1;
+                    if (moveRight) moveDir.x += 1;
+                    moveDir.normalize();
+
+                    if (moveForward || moveBackward) velocity.z += moveDir.z * 50.0 * delta;
+                    if (moveLeft || moveRight) velocity.x += moveDir.x * 50.0 * delta;
+
+                    controls.moveRight(-velocity.x * delta);
+                    controls.moveForward(-velocity.z * delta);
+
+                    const playerObj = controls.getObject();
+                    playerObj.position.y += velocity.y * delta;
+
+                    // Arena Floor Detection
+                    if (playerObj.position.y <= 0.5 + PLAYER_EYE_HEIGHT) {
                         velocity.y = 0;
+                        playerObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
                         canJump = true;
                         isGliding = false;
                     }
+
+                    // Arena Border Constraints (35 Radius Boundary)
+                    const pDist = Math.sqrt(playerObj.position.x * playerObj.position.x + playerObj.position.z * playerObj.position.z);
+                    if (pDist > 34) {
+                        const angle = Math.atan2(playerObj.position.z, playerObj.position.x);
+                        playerObj.position.x = Math.cos(angle) * 34;
+                        playerObj.position.z = Math.sin(angle) * 34;
+                    }
+
+                    broadcastPlayerPos();
                 }
 
-                broadcastPlayerPos();
-            }
-
-            endCrystals.forEach(c => {
-                c.userData.floatOffset += delta * 3;
-                c.position.y += Math.sin(c.userData.floatOffset) * 0.003;
-                if (c.userData.outerCrystal) {
-                    c.userData.outerCrystal.rotation.y += delta;
-                }
-            });
-
-            for (let i = activeArrows.length - 1; i >= 0; i--) {
-                const arr = activeArrows[i];
-                arr.mesh.position.add(arr.dir.clone().multiplyScalar(delta));
-                arr.age += delta;
-
-                if (arr.age > 3.0) {
-                    scene.remove(arr.mesh);
-                    activeArrows.splice(i, 1);
-                }
-            }
-
-            for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
-                const pearl = activeEnderPearls[i];
-                pearl.mesh.position.add(pearl.velocity.clone().multiplyScalar(delta));
-                pearl.velocity.y -= 20.0 * delta;
-                pearl.age += delta;
-
-                if (pearl.mesh.position.y <= 0.5 || pearl.age > 4.0) {
-                    controls.getObject().position.copy(pearl.mesh.position).add(new THREE.Vector3(0, PLAYER_EYE_HEIGHT, 0));
-                    scene.remove(pearl.mesh);
-                    activeEnderPearls.splice(i, 1);
-                    playSound('explode');
-                    spawnParticleExplosion(controls.getObject().position);
-                    showActionText("Ender Pearl Teleport!");
-                }
-            }
-
-            for (let i = particleSystems.length - 1; i >= 0; i--) {
-                const p = particleSystems[i];
-                p.mesh.position.add(p.vel.clone().multiplyScalar(delta));
-                p.life -= delta;
-                if (p.life <= 0) {
-                    scene.remove(p.mesh);
-                    particleSystems.splice(i, 1);
-                }
-            }
-
-            if (aiSteveMesh) updateAISteveLogic(delta);
-            if (broPlayerMesh && broPlayerMesh.position.y > 0.5) {
-                broPlayerMesh.position.y -= 9.8 * delta;
-                if (broPlayerMesh.position.y < 0.5) broPlayerMesh.position.y = 0.5;
+                // AI Steve Bot Behavior Updates
+                if (gameMode === 'ai') updateAISteveLogic(delta);
             }
 
             renderer.render(scene, camera);
