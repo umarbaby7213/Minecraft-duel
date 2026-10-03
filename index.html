@@ -151,7 +151,7 @@
         <div id="inventory-screen">
             <h3>PLAYER INVENTORY (Press E to Close)</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
-            <p style="font-size: 11px; color: #333; text-align: center;">Click any item to refill hotbar slot to 64!</p>
+            <p style="font-size: 11px; color: #333; text-align: center; margin-top: 5px;">Click any item to refill hotbar slot to 64!</p>
         </div>
 
         <!-- HUD -->
@@ -234,7 +234,7 @@
                 
                 <input type="number" id="room-input" placeholder="Enter Room Code (e.g. 1234)" />
                 <div class="mp-btn-container">
-                    <button class="mp-btn" id="btn-join-mp" style="background:#0077ff; width:100%;">JOIN ROOM</button>
+                    <button class="mp-btn" id="btn-join-mp" style="background:#0077ff; width:100%;">JOIN / HOST ROOM</button>
                 </div>
             </div>
         </div>
@@ -267,7 +267,7 @@
         let isGliding = false;
 
         let gameMode = 'none';
-        let peer, peerConn;
+        let peer = null, peerConn = null;
         let remotePlayerMesh = null;
         let broPlayerMesh = null;
         let remotePlayerHealth = 10;
@@ -465,7 +465,7 @@
                 slot.innerHTML = `${item.icon}<span class="count-badge">64</span>`;
                 slot.onclick = () => {
                     counts[item.type] = 64;
-                    const badgeId = item.type === 'gapple' ? 'gapple-count' : `${item.type}-count`;
+                    const badgeId = `${item.type}-count`;
                     const badge = document.getElementById(badgeId);
                     if (badge) badge.innerText = 64;
                     showActionText(`Refilled ${item.type.toUpperCase()} to 64!`);
@@ -825,61 +825,67 @@
         }
 
         function initMultiplayer(roomCode) {
-            const fullRoomID = "donut-smp-match-" + roomCode;
+            const hostID = "donut-smp-room-" + roomCode;
 
-            remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
-            remotePlayerMesh.position.set(-10, 0.5, -10);
-            
-            remotePlayerHealthBarMesh = createOverheadHealthBar();
-            remotePlayerHealthBarMesh.position.set(0, 2.2, 0);
-            remotePlayerMesh.add(remotePlayerHealthBarMesh);
-            scene.add(remotePlayerMesh);
+            if (!remotePlayerMesh) {
+                remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
+                remotePlayerMesh.position.set(-10, 0.5, -10);
+                
+                remotePlayerHealthBarMesh = createOverheadHealthBar();
+                remotePlayerHealthBarMesh.position.set(0, 2.2, 0);
+                remotePlayerMesh.add(remotePlayerHealthBarMesh);
+                scene.add(remotePlayerMesh);
+            }
 
-            showActionText("Connecting to Room Code: " + roomCode + "...");
+            showActionText("Connecting to PeerJS Room: " + roomCode + "...");
 
             peer = new Peer();
 
             peer.on('open', () => {
-                const conn = peer.connect(fullRoomID);
+                const conn = peer.connect(hostID);
                 
                 conn.on('open', () => {
                     peerConn = conn;
                     setupPeerEvents(peerConn);
-                    showActionText("Connected to Room as Client! Battle Start!");
+                    showActionText("Joined Room " + roomCode + " as Client!");
                 });
 
                 conn.on('error', () => {
-                    startHostingRoom(fullRoomID, roomCode);
+                    startHostingRoom(hostID, roomCode);
                 });
 
                 setTimeout(() => {
                     if (!peerConn || !peerConn.open) {
                         peer.destroy();
-                        startHostingRoom(fullRoomID, roomCode);
+                        startHostingRoom(hostID, roomCode);
                     }
-                }, 2000);
+                }, 2500);
+            });
+
+            peer.on('error', () => {
+                startHostingRoom(hostID, roomCode);
             });
         }
 
-        function startHostingRoom(fullRoomID, roomCode) {
-            peer = new Peer(fullRoomID);
+        function startHostingRoom(hostID, roomCode) {
+            peer = new Peer(hostID);
 
             peer.on('open', () => {
-                showActionText("Hosting Room Code: " + roomCode + " (Waiting for Friend...)");
+                showActionText("Hosting Room Code: " + roomCode + " (Waiting for Player...)");
 
                 peer.on('connection', (conn) => {
                     peerConn = conn;
                     setupPeerEvents(peerConn);
-                    showActionText("Friend Connected! Let's Fight!");
+                    showActionText("Player Joined! Fight Start!");
                 });
             });
 
             peer.on('error', (err) => {
                 if (err.type === 'unavailable-id') {
-                    showActionText("Room already active, joining as client...");
+                    showActionText("Connecting to Host Room " + roomCode + "...");
                     peer = new Peer();
                     peer.on('open', () => {
-                        peerConn = peer.connect(fullRoomID);
+                        peerConn = peer.connect(hostID);
                         setupPeerEvents(peerConn);
                     });
                 }
@@ -888,7 +894,7 @@
 
         function setupPeerEvents(conn) {
             conn.on('open', () => {
-                showActionText("Connection established successfully!");
+                showActionText("Connected! Match Started!");
             });
 
             conn.on('data', (data) => {
@@ -900,10 +906,10 @@
                     placeEndCrystal(data.x, data.y, data.z);
                 } else if (data.type === 'damage') {
                     damageRemotePlayer(data.amount);
-                    spawnParticleExplosion(remotePlayerMesh.position);
+                    if (remotePlayerMesh) spawnParticleExplosion(remotePlayerMesh.position);
                 } else if (data.type === 'hit_me') {
                     takeDamage(data.damage || 3);
-                    showActionText("Hit by Friend!");
+                    showActionText("Hit by Enemy Player!");
                 }
             });
         }
