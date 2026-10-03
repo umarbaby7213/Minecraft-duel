@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Donut SMP - End Crystal PvP</title>  <!-- Import Minecraft pixel font -->
-    <link href="https://fonts.cdnfonts.com/css/minecraft-4" rel="stylesheet">
+    <title>Donut SMP - End Crystal PvP</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
@@ -106,6 +105,7 @@
         #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         .slot { width: 40px; height: 40px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 16px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 8px #fff; }
+        .slot.selected-drag { border-color: #ffaa00; background: rgba(255, 170, 0, 0.5); }
         .slot-num { position: absolute; top: 1px; left: 2px; font-size: 8px; color: #aaa; font-weight: bold; }
         .count-badge { position: absolute; bottom: 1px; right: 2px; font-size: 9px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
@@ -120,6 +120,7 @@
         .inv-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #8b8b8b; padding: 6px; border: 3px solid #373737; }
         .inv-slot { width: 34px; height: 34px; background: #8b8b8b; border: 2px solid #373737; display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; position: relative; }
         .inv-slot:hover { background: #aaaaaa; }
+        .inv-slot.selected-drag { border-color: #ffaa00; background: #d4a373; }
 
         /* Mobile Controls Overlays */
         #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; z-index: 6; display: none; }
@@ -180,9 +181,9 @@
 
         <!-- Full Inventory GUI Screen -->
         <div id="inventory-screen">
-            <h3>PLAYER INVENTORY (Press E to Close)</h3>
+            <h3>PLAYER INVENTORY (Press E to Close)[cite: 3]</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
-            <p style="font-size: 11px; color: #333; text-align: center; margin-top: 5px;">Click any item to refill hotbar slot to 64!</p>
+            <p style="font-size: 11px; color: #333; text-align: center; margin-top: 5px;">Click slot A then slot B to shift/swap items anywhere!</p>
         </div>
 
         <!-- HUD -->
@@ -217,15 +218,15 @@
             <!-- Hotbar (9 Slots) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
-                    <div class="slot active" id="slot-1" onclick="selectSlot(1)"><span class="slot-num">1</span>🗡️</div>
-                    <div class="slot" id="slot-2" onclick="selectSlot(2)"><span class="slot-num">2</span><div class="pixel-gapple"></div><span class="count-badge" id="gapple-count">64</span></div>
-                    <div class="slot" id="slot-3" onclick="selectSlot(3)"><span class="slot-num">3</span>🔮<span class="count-badge" id="crystal-count">64</span></div>
-                    <div class="slot" id="slot-4" onclick="selectSlot(4)"><span class="slot-num">4</span>⬛<span class="count-badge" id="obsidian-count">64</span></div>
-                    <div class="slot" id="slot-5" onclick="selectSlot(5)"><span class="slot-num">5</span>🗿<span class="count-badge" id="totem-count">64</span></div>
-                    <div class="slot" id="slot-6" onclick="selectSlot(6)"><span class="slot-num">6</span>🏹<span class="count-badge" id="arrow-count">64</span></div>
-                    <div class="slot" id="slot-7" onclick="selectSlot(7)"><span class="slot-num">7</span>🚀<span class="count-badge" id="firework-count">64</span></div>
-                    <div class="slot" id="slot-8" onclick="selectSlot(8)"><span class="slot-num">8</span>🔨<span class="count-badge" id="mace-count">64</span></div>
-                    <div class="slot" id="slot-9" onclick="selectSlot(9)"><span class="slot-num">9</span>🟣<span class="count-badge" id="enderpearl-count">64</span></div>
+                    <div class="slot active" id="slot-1" onclick="handleSlotClick('hotbar', 0)"><span class="slot-num">1</span><span class="slot-icon">🗡️</span><span class="count-badge" id="hotbar-count-0"></span></div>
+                    <div class="slot" id="slot-2" onclick="handleSlotClick('hotbar', 1)"><span class="slot-num">2</span><span class="slot-icon"><div class="pixel-gapple"></div></span><span class="count-badge" id="hotbar-count-1">64</span></div>
+                    <div class="slot" id="slot-3" onclick="handleSlotClick('hotbar', 2)"><span class="slot-num">3</span><span class="slot-icon">🔮</span><span class="count-badge" id="hotbar-count-2">64</span></div>
+                    <div class="slot" id="slot-4" onclick="handleSlotClick('hotbar', 3)"><span class="slot-num">4</span><span class="slot-icon">⬛</span><span class="count-badge" id="hotbar-count-3">64</span></div>
+                    <div class="slot" id="slot-5" onclick="handleSlotClick('hotbar', 4)"><span class="slot-num">5</span><span class="slot-icon">🗿</span><span class="count-badge" id="hotbar-count-4">64</span></div>
+                    <div class="slot" id="slot-6" onclick="handleSlotClick('hotbar', 5)"><span class="slot-num">6</span><span class="slot-icon">🏹</span><span class="count-badge" id="hotbar-count-5">64</span></div>
+                    <div class="slot" id="slot-7" onclick="handleSlotClick('hotbar', 6)"><span class="slot-num">7</span><span class="slot-icon">🚀</span><span class="count-badge" id="hotbar-count-6">64</span></div>
+                    <div class="slot" id="slot-8" onclick="handleSlotClick('hotbar', 7)"><span class="slot-num">8</span><span class="slot-icon">🔨</span><span class="count-badge" id="hotbar-count-7">64</span></div>
+                    <div class="slot" id="slot-9" onclick="handleSlotClick('hotbar', 8)"><span class="slot-num">9</span><span class="slot-icon">🟣</span><span class="count-badge" id="hotbar-count-8">64</span></div>
                 </div>
             </div>
         </div>
@@ -278,7 +279,6 @@
         const velocity = new THREE.Vector3();
         let prevTime = performance.now();
 
-        // Eye-level player height above floor
         const PLAYER_EYE_HEIGHT = 1.6;
 
         let botDifficulty = 'medium';
@@ -294,9 +294,71 @@
         let textTimeout = null;
         let isInventoryOpen = false;
 
-        let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64, mace: 64, enderpearl: 64 };
-        let isGliding = false;
+        // Inventory data arrays (Hotbar: 9 slots, Main Inventory: 27 slots)
+        let hotbarData = [
+            { icon: '🗡️️', type: 'sword', count: '' },
+            { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
+            { icon: '🔮', type: 'crystal', count: 64 },
+            { icon: '⬛', type: 'obsidian', count: 64 },
+            { icon: '🗿', type: 'totem', count: 64 },
+            { icon: '🏹', type: 'arrow', count: 64 },
+            { icon: '🚀', type: 'firework', count: 64 },
+            { icon: '🔨', type: 'mace', count: 64 },
+            { icon: '🟣', type: 'enderpearl', count: 64 }
+        ];
 
+        let inventoryData = [];
+        for (let i = 0; i < 27; i++) {
+            inventoryData.push({ icon: '🔮', type: 'crystal', count: 64 });
+        }
+
+        // Drag and drop tracking state
+        let draggedItem = null;
+
+        let counts = { 
+            get gapple() { return getCountByType('gapple'); },
+            set gapple(val) { setCountByType('gapple', val); },
+            get crystal() { return getCountByType('crystal'); },
+            set crystal(val) { setCountByType('crystal', val); },
+            get obsidian() { return getCountByType('obsidian'); },
+            set obsidian(val) { setCountByType('obsidian', val); },
+            get totem() { return getCountByType('totem'); },
+            set totem(val) { setCountByType('totem', val); },
+            get arrow() { return getCountByType('arrow'); },
+            set arrow(val) { setCountByType('arrow', val); },
+            get firework() { return getCountByType('firework'); },
+            set firework(val) { setCountByType('firework', val); },
+            get mace() { return getCountByType('mace'); },
+            set mace(val) { setCountByType('mace', val); },
+            get enderpearl() { return getCountByType('enderpearl'); },
+            set enderpearl(val) { setCountByType('enderpearl', val); }
+        };
+
+        function getCountByType(type) {
+            let total = 0;
+            hotbarData.forEach(item => { if (item && item.type === type) total += (typeof item.count === 'number' ? item.count : 1); });
+            inventoryData.forEach(item => { if (item && item.type === type) total += (typeof item.count === 'number' ? item.count : 1); });
+            return total;
+        }
+
+        function setCountByType(type, val) {
+            let rem = val;
+            hotbarData.forEach(item => {
+                if (item && item.type === type) {
+                    item.count = Math.min(64, rem);
+                    rem -= item.count;
+                }
+            });
+            inventoryData.forEach(item => {
+                if (item && item.type === type) {
+                    item.count = Math.min(64, rem);
+                    rem -= item.count;
+                }
+            });
+            updateInventoryUI();
+        }
+
+        let isGliding = false;
         let gameMode = 'none';
         let peer = null, peerConn = null;
         let remotePlayerMesh = null;
@@ -462,7 +524,7 @@
             spawnDummyTargets();
             setupControls();
             setupMouseInteraction();
-            populateFullInventoryGUI();
+            updateInventoryUI();
 
             if (isMobile) setupMobileTouchControls();
 
@@ -484,7 +546,7 @@
             document.getElementById('death-screen').style.display = 'none';
             playerHealth = maxHealth;
             counts.totem = 64;
-            document.getElementById('totem-count').innerText = 64;
+            updateInventoryUI();
             updateHeartsUI();
             controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
             velocity.set(0, 0, 0);
@@ -493,33 +555,69 @@
             }
         }
 
-        function populateFullInventoryGUI() {
+        // Inventory Slot Drag & Drop / Swapping Logic
+        function updateInventoryUI() {
+            // Update Hotbar UI
+            for (let i = 0; i < 9; i++) {
+                const item = hotbarData[i];
+                const slotEl = document.getElementById(`slot-${i + 1}`);
+                if (!slotEl) continue;
+                const iconSpan = slotEl.querySelector('.slot-icon');
+                const countSpan = document.getElementById(`hotbar-count-${i}`);
+
+                if (item) {
+                    iconSpan.innerHTML = item.icon;
+                    countSpan.innerText = item.count !== '' ? item.count : '';
+                } else {
+                    iconSpan.innerHTML = '';
+                    countSpan.innerText = '';
+                }
+            }
+
+            // Update Full Inventory Screen UI
             const container = document.getElementById('inv-grid-container');
             container.innerHTML = '';
 
-            const items = [
-                { icon: '🔨', type: 'mace' }, { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }, { icon: '🗿', type: 'totem' }, { icon: '🍎', type: 'gapple' },
-                { icon: '🏹', type: 'arrow' }, { icon: '🚀', type: 'firework' }, { icon: '🟣', type: 'enderpearl' }, { icon: '🔨', type: 'mace' },
-                { icon: '🔮', type: 'crystal' }, { icon: '⬛', type: 'obsidian' }
-            ];
-
-            items.forEach(item => {
+            inventoryData.forEach((item, index) => {
                 const slot = document.createElement('div');
                 slot.className = 'inv-slot';
-                slot.innerHTML = `${item.icon}<span class="count-badge">64</span>`;
-                slot.onclick = () => {
-                    counts[item.type] = 64;
-                    const badgeId = `${item.type}-count`;
-                    const badge = document.getElementById(badgeId);
-                    if (badge) badge.innerText = 64;
-                    showActionText(`Refilled ${item.type.toUpperCase()} to 64!`);
-                };
+                if (draggedItem && draggedItem.container === 'inventory' && draggedItem.index === index) {
+                    slot.classList.add('selected-drag');
+                }
+                
+                let innerHTML = '';
+                if (item) {
+                    innerHTML = `${item.icon}<span class="count-badge">${item.count}</span>`;
+                }
+                slot.innerHTML = innerHTML;
+                slot.onclick = () => handleSlotClick('inventory', index);
                 container.appendChild(slot);
             });
+        }
+
+        function handleSlotClick(containerName, index) {
+            const targetCollection = containerName === 'hotbar' ? hotbarData : inventoryData;
+            const clickedItem = targetCollection[index];
+
+            if (!draggedItem) {
+                if (!clickedItem) return; // Empty slot clicked
+                draggedItem = { container: containerName, index: index, item: clickedItem };
+                showActionText("Picked up item. Click destination slot!");
+                playSound('eat');
+            } else {
+                // Swap or place into destination slot
+                targetCollection[index] = draggedItem.item;
+                
+                const origCollection = draggedItem.container === 'hotbar' ? hotbarData : inventoryData;
+                origCollection[draggedItem.index] = clickedItem;
+
+                draggedItem = null;
+                playSound('place');
+                showActionText("Shifted / Swapped slot successfully!");
+            }
+
+            updateInventoryUI();
+            selectSlot(currentSlot); // refresh active held item
         }
 
         function toggleInventory() {
@@ -530,11 +628,12 @@
                 if (!isMobile) controls.unlock();
             } else {
                 invScreen.style.display = 'none';
+                draggedItem = null;
+                updateInventoryUI();
                 if (!isMobile) controls.lock();
             }
         }
 
-        /* Fully Detailed Blocky Minecraft Character Rig Standing On Floor */
         function createStevePlayerMesh(shirtColor = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
 
@@ -543,13 +642,11 @@
             const pantsMat = new THREE.MeshStandardMaterial({ color: 0x002288, roughness: 0.8 });
             const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a2e12, roughness: 0.9 });
 
-            // Torso (0.8 x 0.9 x 0.4)
             const torsoGeo = new THREE.BoxGeometry(0.8, 0.9, 0.4);
             const torso = new THREE.Mesh(torsoGeo, shirtMat);
             torso.position.y = 1.05;
             steveGroup.add(torso);
 
-            // Head (0.6 x 0.6 x 0.6)
             const headGroup = new THREE.Group();
             headGroup.position.set(0, 1.5, 0);
 
@@ -564,7 +661,6 @@
 
             steveGroup.add(headGroup);
 
-            // Left Leg Pivot
             const leftLegPivot = new THREE.Group();
             leftLegPivot.position.set(-0.2, 0.6, 0);
             const legGeo = new THREE.BoxGeometry(0.38, 0.6, 0.38);
@@ -573,7 +669,6 @@
             leftLegPivot.add(leftLeg);
             steveGroup.add(leftLegPivot);
 
-            // Right Leg Pivot
             const rightLegPivot = new THREE.Group();
             rightLegPivot.position.set(0.2, 0.6, 0);
             const rightLeg = new THREE.Mesh(legGeo, pantsMat);
@@ -581,7 +676,6 @@
             rightLegPivot.add(rightLeg);
             steveGroup.add(rightLegPivot);
 
-            // Left Arm Pivot
             const leftArmPivot = new THREE.Group();
             leftArmPivot.position.set(-0.58, 1.4, 0);
             const armGeo = new THREE.BoxGeometry(0.36, 0.8, 0.36);
@@ -590,7 +684,6 @@
             leftArmPivot.add(leftArm);
             steveGroup.add(leftArmPivot);
 
-            // Right Arm Pivot
             const rightArmPivot = new THREE.Group();
             rightArmPivot.position.set(0.58, 1.4, 0);
             const rightArm = new THREE.Mesh(armGeo, shirtMat);
@@ -599,7 +692,6 @@
             steveGroup.add(rightArmPivot);
 
             if (isBot) {
-                // Elytra Wings
                 const wingGeo = new THREE.BoxGeometry(0.1, 0.9, 0.4);
                 const wingMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.3 });
                 
@@ -613,7 +705,6 @@
                 rightWing.rotation.set(0.2, -0.3, -0.4);
                 steveGroup.add(rightWing);
 
-                // Held Mace attached to Right Arm
                 const botMace = new THREE.Group();
                 const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
                 const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
@@ -632,10 +723,7 @@
                 rightArmPivot.add(botMace);
             }
 
-            steveGroup.userData = {
-                leftLegPivot, rightLegPivot, leftArmPivot, rightArmPivot, headGroup
-            };
-
+            steveGroup.userData = { leftLegPivot, rightLegPivot, leftArmPivot, rightArmPivot, headGroup };
             return steveGroup;
         }
 
@@ -1204,9 +1292,12 @@
                         if (canJump) { 
                             velocity.y += 11.0; 
                             canJump = false; 
-                        } else if (currentSlot === 7 && !isGliding && controls.getObject().position.y > 3.0) {
-                            isGliding = true;
-                            showActionText("Elytra Gliding Activated!");
+                        } else {
+                            const activeItem = hotbarData[currentSlot - 1];
+                            if (activeItem && activeItem.type === 'firework' && !isGliding && controls.getObject().position.y > 3.0) {
+                                isGliding = true;
+                                showActionText("Elytra Gliding Activated!");
+                            }
                         }
                         break;
                     case 'KeyE': toggleInventory(); break;
@@ -1320,9 +1411,12 @@
                 if (canJump) { 
                     velocity.y += 11.0; 
                     canJump = false; 
-                } else if (currentSlot === 7 && !isGliding) {
-                    isGliding = true;
-                    showActionText("Elytra Gliding!");
+                } else {
+                    const activeItem = hotbarData[currentSlot - 1];
+                    if (activeItem && activeItem.type === 'firework' && !isGliding) {
+                        isGliding = true;
+                        showActionText("Elytra Gliding!");
+                    }
                 }
             });
 
@@ -1347,11 +1441,14 @@
                 }
             }
 
-            swordMesh.visible = (currentSlot === 1);
-            heldTotemMesh.visible = (currentSlot === 5);
-            crossbowMesh.visible = (currentSlot === 6);
-            maceMesh.visible = (currentSlot === 8);
-            enderpearlMesh.visible = (currentSlot === 9);
+            const activeItem = hotbarData[slotNum - 1];
+            const itemType = activeItem ? activeItem.type : '';
+
+            swordMesh.visible = (itemType === 'sword');
+            heldTotemMesh.visible = (itemType === 'totem');
+            crossbowMesh.visible = (itemType === 'arrow');
+            maceMesh.visible = (itemType === 'mace');
+            enderpearlMesh.visible = (itemType === 'enderpearl');
         }
 
         function setupMouseInteraction() {
@@ -1386,8 +1483,6 @@
         function shootCrossbow() {
             if (counts.arrow <= 0) return;
             counts.arrow--;
-            document.getElementById('arrow-count').innerText = counts.arrow;
-
             playSound('shoot');
 
             const arrowGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.6);
@@ -1410,8 +1505,6 @@
         function throwEnderPearl() {
             if (counts.enderpearl <= 0) return;
             counts.enderpearl--;
-            document.getElementById('enderpearl-count').innerText = counts.enderpearl;
-
             playSound('pearl');
 
             const pearlGeo = new THREE.SphereGeometry(0.15, 8, 8);
@@ -1435,8 +1528,6 @@
         function useFireworkBoost() {
             if (counts.firework <= 0) return;
             counts.firework--;
-            document.getElementById('firework-count').innerText = counts.firework;
-
             playSound('firework');
 
             const dir = new THREE.Vector3();
@@ -1452,10 +1543,13 @@
         }
 
         function handleLeftClick() {
-            if (currentSlot === 1) swingSwordAnimation();
-            else if (currentSlot === 6) { shootCrossbow(); return; }
-            else if (currentSlot === 8) swingMaceAnimation();
-            else if (currentSlot === 9) { throwEnderPearl(); return; }
+            const activeItem = hotbarData[currentSlot - 1];
+            const itemType = activeItem ? activeItem.type : '';
+
+            if (itemType === 'sword') swingSwordAnimation();
+            else if (itemType === 'arrow') { shootCrossbow(); return; }
+            else if (itemType === 'mace') swingMaceAnimation();
+            else if (itemType === 'enderpearl') { throwEnderPearl(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
 
@@ -1467,8 +1561,8 @@
                 return;
             }
 
-            const fallDamageBonus = currentSlot === 8 ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
-            const baseDmg = currentSlot === 8 ? Math.round(5 * fallDamageBonus) : 3;
+            const fallDamageBonus = itemType === 'mace' ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
+            const baseDmg = itemType === 'mace' ? Math.round(5 * fallDamageBonus) : 3;
 
             if (broPlayerMesh || remotePlayerMesh) {
                 const targetBro = broPlayerMesh || remotePlayerMesh;
@@ -1500,9 +1594,12 @@
         }
 
         function handleRightClick() {
-            if (currentSlot === 2) { eatGoldenApple(); return; }
-            if (currentSlot === 7) { useFireworkBoost(); return; }
-            if (currentSlot === 9) { throwEnderPearl(); return; }
+            const activeItem = hotbarData[currentSlot - 1];
+            const itemType = activeItem ? activeItem.type : '';
+
+            if (itemType === 'gapple') { eatGoldenApple(); return; }
+            if (itemType === 'firework') { useFireworkBoost(); return; }
+            if (itemType === 'enderpearl') { throwEnderPearl(); return; }
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
             const intersects = raycaster.intersectObjects(placeableObjects, false);
@@ -1514,10 +1611,10 @@
                 const gridY = Math.round(point.y);
                 const gridZ = Math.round(point.z);
 
-                if (currentSlot === 4 && counts.obsidian > 0) {
+                if (itemType === 'obsidian' && counts.obsidian > 0) {
                     placeObsidianBlock(gridX, gridY, gridZ);
                     if (peerConn && peerConn.open) peerConn.send({ type: 'obsidian', x: gridX, y: gridY, z: gridZ });
-                } else if (currentSlot === 3 && counts.crystal > 0) {
+                } else if (itemType === 'crystal' && counts.crystal > 0) {
                     placeEndCrystal(gridX, gridY, gridZ);
                     if (peerConn && peerConn.open) peerConn.send({ type: 'crystal', x: gridX, y: gridY, z: gridZ });
                 }
@@ -1526,7 +1623,6 @@
 
         function placeObsidianBlock(x, y, z) {
             counts.obsidian--;
-            document.getElementById('obsidian-count').innerText = counts.obsidian;
             playSound('place');
 
             const obsGeo = new THREE.BoxGeometry(1, 1, 1);
@@ -1541,7 +1637,6 @@
 
         function placeEndCrystal(x, y, z) {
             counts.crystal--;
-            document.getElementById('crystal-count').innerText = counts.crystal;
             playSound('place');
 
             const crystal = createEndCrystalMesh();
@@ -1569,7 +1664,6 @@
         function eatGoldenApple() {
             if (counts.gapple <= 0) return;
             counts.gapple--;
-            document.getElementById('gapple-count').innerText = counts.gapple;
             playSound('eat');
 
             playerHealth = Math.min(maxHealth, playerHealth + 4);
@@ -1588,7 +1682,6 @@
             if (playerHealth <= 0) {
                 if (counts.totem > 0) {
                     counts.totem--;
-                    document.getElementById('totem-count').innerText = counts.totem;
                     playerHealth = maxHealth;
                     updateHeartsUI();
                     playSound('totem');
@@ -1598,7 +1691,6 @@
                     setTimeout(() => pop.classList.remove('active'), 500);
                     showActionText("TOTEM OF UNDYING SAVED YOU!");
                 } else {
-                    // Show Death Screen Menu
                     if (!isMobile) controls.unlock();
                     document.getElementById('death-screen').style.display = 'flex';
                     showActionText("YOU WERE SLAIN BY AI STEVE!");
