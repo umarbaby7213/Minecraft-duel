@@ -624,7 +624,6 @@
 
             if (!isMobile) controls.unlock();
 
-            // Notify Peer JS client if in multiplayer mode
             if (gameMode === 'mp' && peerConn && peerConn.open) {
                 peerConn.send({ type: 'died' });
             }
@@ -636,11 +635,9 @@
             updateHeartsUI();
             document.getElementById('death-screen').style.display = 'none';
 
-            // Reset player position to spawn arena center
             controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
             velocity.set(0, 0, 0);
 
-            // Refill items
             inventorySlots.forEach(s => { if (s && s.type !== 'sword') s.count = 64; });
             renderHotbarUI();
 
@@ -648,7 +645,6 @@
             showActionText("Respawned! Ready for Battle!");
         }
 
-        /* Fully Detailed Blocky Minecraft Character Rig Standing On Floor */
         function createStevePlayerMesh(shirtColor = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
 
@@ -657,13 +653,11 @@
             const pantsMat = new THREE.MeshStandardMaterial({ color: 0x002288, roughness: 0.8 });
             const hairMat = new THREE.MeshStandardMaterial({ color: 0x4a2e12, roughness: 0.9 });
 
-            // Torso (0.8 x 0.9 x 0.4)
             const torsoGeo = new THREE.BoxGeometry(0.8, 0.9, 0.4);
             const torso = new THREE.Mesh(torsoGeo, shirtMat);
             torso.position.y = 1.05;
             steveGroup.add(torso);
 
-            // Head (0.6 x 0.6 x 0.6)
             const headGroup = new THREE.Group();
             headGroup.position.set(0, 1.5, 0);
 
@@ -678,7 +672,6 @@
 
             steveGroup.add(headGroup);
 
-            // Left Leg Pivot
             const leftLegPivot = new THREE.Group();
             leftLegPivot.position.set(-0.2, 0.6, 0);
             const legGeo = new THREE.BoxGeometry(0.38, 0.6, 0.38);
@@ -687,7 +680,6 @@
             leftLegPivot.add(leftLeg);
             steveGroup.add(leftLegPivot);
 
-            // Right Leg Pivot
             const rightLegPivot = new THREE.Group();
             rightLegPivot.position.set(0.2, 0.6, 0);
             const rightLeg = new THREE.Mesh(legGeo, pantsMat);
@@ -695,7 +687,6 @@
             rightLegPivot.add(rightLeg);
             steveGroup.add(rightLegPivot);
 
-            // Left Arm Pivot
             const leftArmPivot = new THREE.Group();
             leftArmPivot.position.set(-0.58, 1.4, 0);
             const armGeo = new THREE.BoxGeometry(0.36, 0.8, 0.36);
@@ -704,7 +695,6 @@
             leftArmPivot.add(leftArm);
             steveGroup.add(leftArmPivot);
 
-            // Right Arm Pivot
             const rightArmPivot = new THREE.Group();
             rightArmPivot.position.set(0.58, 1.4, 0);
             const rightArm = new THREE.Mesh(armGeo, shirtMat);
@@ -713,7 +703,6 @@
             steveGroup.add(rightArmPivot);
 
             if (isBot) {
-                // Elytra Wings
                 const wingGeo = new THREE.BoxGeometry(0.1, 0.9, 0.4);
                 const wingMat = new THREE.MeshStandardMaterial({ color: 0x444455, roughness: 0.3 });
                 
@@ -727,7 +716,6 @@
                 rightWing.rotation.set(0.2, -0.3, -0.4);
                 steveGroup.add(rightWing);
 
-                // Held Mace attached to Right Arm
                 const botMace = new THREE.Group();
                 const handleGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.8);
                 const handleMat = new THREE.MeshStandardMaterial({ color: 0x3a2512 });
@@ -746,10 +734,7 @@
                 rightArmPivot.add(botMace);
             }
 
-            steveGroup.userData = {
-                leftLegPivot, rightLegPivot, leftArmPivot, rightArmPivot, headGroup
-            };
-
+            steveGroup.userData = { leftLegPivot, rightLegPivot, leftArmPivot, rightArmPivot, headGroup };
             return steveGroup;
         }
 
@@ -976,6 +961,13 @@
                     aiSteveMesh.position.y = 0.5;
                     aiSteveVerticalVel = 0;
 
+                    const botDist = Math.sqrt(aiSteveMesh.position.x * aiSteveMesh.position.x + aiSteveMesh.position.z * aiSteveMesh.position.z);
+                    if (botDist > 34) {
+                        const angle = Math.atan2(aiSteveMesh.position.z, aiSteveMesh.position.x);
+                        aiSteveMesh.position.x = Math.cos(angle) * 34;
+                        aiSteveMesh.position.z = Math.sin(angle) * 34;
+                    }
+
                     if (aiSteveIsSmashing) {
                         aiSteveIsSmashing = false;
                         playSound('mace');
@@ -996,8 +988,14 @@
                 dir.y = 0;
                 dir.normalize();
 
-                aiSteveMesh.position.x += dir.x * 5.0 * speedMult * delta;
-                aiSteveMesh.position.z += dir.z * 5.0 * speedMult * delta;
+                const nextX = aiSteveMesh.position.x + dir.x * 5.0 * speedMult * delta;
+                const nextZ = aiSteveMesh.position.z + dir.z * 5.0 * speedMult * delta;
+                const nextDist = Math.sqrt(nextX * nextX + nextZ * nextZ);
+
+                if (nextDist <= 34) {
+                    aiSteveMesh.position.x = nextX;
+                    aiSteveMesh.position.z = nextZ;
+                }
 
                 aiSteveMesh.lookAt(playerPos.x, aiSteveMesh.position.y, playerPos.z);
 
@@ -1142,12 +1140,12 @@
             const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
             const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
 
-            // Create extended terrain so walking outside floor looks continuous
             const sandPositions = [];
-            const outerFloorRadius = 100;
-            for (let x = -outerFloorRadius; x <= outerFloorRadius; x++) {
-                for (let z = -outerFloorRadius; z <= outerFloorRadius; z++) {
-                    sandPositions.push(new THREE.Vector3(x, 0, z));
+            for (let x = -radius; x <= radius; x++) {
+                for (let z = -radius; z <= radius; z++) {
+                    if (x * x + z * z <= radius * radius) {
+                        sandPositions.push(new THREE.Vector3(x, 0, z));
+                    }
                 }
             }
 
@@ -1212,7 +1210,7 @@
             stoneTransforms.push(...getRingTransforms(pillarRadius + 1, 20, 1));
             const roofTransforms = getRingTransforms(pillarRadius, 21, 1);
 
-            function createBatchMesh(geometry, material, transforms) {
+            function createBatchMesh(geometry, material, transforms, isSolidWall = false) {
                 if (transforms.length === 0) return;
                 const instanced = new THREE.InstancedMesh(geometry, material, transforms.length);
                 const mat = new THREE.Matrix4();
@@ -1221,16 +1219,23 @@
                     scaleVec.set(t.sx || 1, t.sy || 1, t.sz || 1);
                     mat.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion(), scaleVec);
                     instanced.setMatrixAt(i, mat);
+
+                    if (isSolidWall) {
+                        const colliderBox = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: false }));
+                        colliderBox.position.set(t.x, t.y, t.z);
+                        colliderBox.scale.copy(scaleVec);
+                        solidColliders.push(colliderBox);
+                    }
                 });
                 instanced.instanceMatrix.needsUpdate = true;
                 scene.add(instanced);
             }
 
-            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms);
-            createBatchMesh(boxGeo, stoneMat, stoneTransforms);
-            createBatchMesh(boxGeo, pillarMat, pillarTransforms);
-            createBatchMesh(boxGeo, leafMat, leafTransforms);
-            createBatchMesh(boxGeo, roofMat, roofTransforms);
+            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms, true);
+            createBatchMesh(boxGeo, stoneMat, stoneTransforms, true);
+            createBatchMesh(boxGeo, pillarMat, pillarTransforms, true);
+            createBatchMesh(boxGeo, leafMat, leafTransforms, false);
+            createBatchMesh(boxGeo, roofMat, roofTransforms, true);
         }
 
         function spawnDummyTargets() {
@@ -1598,343 +1603,328 @@
             pearlMesh.position.copy(camera.position).add(dir.clone().multiplyScalar(0.8));
             scene.add(pearlMesh);
 
-            activeEnderPearls.push({
-                mesh: pearlMesh,
-                velocity: dir.clone().multiplyScalar(35.0).add(new THREE.Vector3(0, 5.0, 0)),
-                age: 0
-            });
+            activeEnderPearls.push({ mesh: pearlMesh, dir: dir.clone().multiplyScalar(30.0), velY: 5.0, age: 0 });
             showActionText("Threw Ender Pearl!");
         }
 
-        function useFireworkBoost() {
-            const activeItem = inventorySlots[currentSlot - 1];
-            if (!activeItem || activeItem.type !== 'firework' || activeItem.count <= 0) return;
+        function placeObsidianBlock(px, py, pz, isRemote = false) {
+            const boxGeo = new THREE.BoxGeometry(1, 1, 1);
+            const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.4 });
+            const obsMesh = new THREE.Mesh(boxGeo, obsMat);
+            obsMesh.position.set(px, py, pz);
+            scene.add(obsMesh);
 
-            activeItem.count--;
-            if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
-            renderHotbarUI();
+            solidColliders.push(obsMesh);
+            placeableObjects.push(obsMesh);
+            playSound('place');
 
-            playSound('firework');
+            if (!isRemote && gameMode === 'mp' && peerConn && peerConn.open) {
+                peerConn.send({ type: 'obsidian', x: px, y: py, z: pz });
+            }
+        }
 
-            const dir = new THREE.Vector3();
-            camera.getWorldDirection(dir);
+        function placeEndCrystal(px, py, pz, isRemote = false) {
+            const crystalMesh = createEndCrystalMesh();
+            crystalMesh.position.set(px, py + 0.5, pz);
+            scene.add(crystalMesh);
+            endCrystals.push(crystalMesh);
+            playSound('place');
 
-            velocity.x += dir.x * 25.0;
-            velocity.y += dir.y * 20.0 + 5.0;
-            velocity.z += dir.z * 25.0;
+            if (!isRemote && gameMode === 'mp' && peerConn && peerConn.open) {
+                peerConn.send({ type: 'crystal', x: px, y: py, z: pz });
+            }
+        }
 
-            isGliding = true;
-            spawnParticleExplosion(camera.position);
-            showActionText("FIREWORK BOOST LAUNCH!");
+        function explodeCrystal(crystalObj) {
+            const pos = crystalObj.position.clone();
+            scene.remove(crystalObj);
+            const idx = endCrystals.indexOf(crystalObj);
+            if (idx !== -1) endCrystals.splice(idx, 1);
+
+            playSound('explode');
+            spawnParticleExplosion(pos);
+
+            const playerDist = camera.position.distanceTo(pos);
+            if (playerDist < 6.0) {
+                const dmg = Math.max(1, Math.round((6.0 - playerDist) * 1.5));
+                takeDamage(dmg, "End Crystal Blast");
+            }
+
+            if (aiSteveMesh) {
+                const aiDist = aiSteveMesh.position.distanceTo(pos);
+                if (aiDist < 6.0) {
+                    const aiDmg = Math.max(1, Math.round((6.0 - aiDist) * 1.5));
+                    damageAISteve(aiDmg);
+                }
+            }
+
+            if (remotePlayerMesh) {
+                const remDist = remotePlayerMesh.position.distanceTo(pos);
+                if (remDist < 6.0) {
+                    const remDmg = Math.max(1, Math.round((6.0 - remDist) * 1.5));
+                    if (gameMode === 'mp' && peerConn && peerConn.open) {
+                        peerConn.send({ type: 'damage', amount: remDmg });
+                    }
+                }
+            }
+        }
+
+        function spawnParticleExplosion(pos) {
+            const pCount = 35;
+            const geom = new THREE.BufferGeometry();
+            const positions = [];
+            const velocities = [];
+
+            for (let i = 0; i < pCount; i++) {
+                positions.push(pos.x, pos.y + 0.5, pos.z);
+                velocities.push(
+                    (Math.random() - 0.5) * 12,
+                    Math.random() * 12 + 2,
+                    (Math.random() - 0.5) * 12
+                );
+            }
+
+            geom.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            const mat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.3, transparent: true, opacity: 1.0 });
+            const pSystem = new THREE.Points(geom, mat);
+            scene.add(pSystem);
+
+            particleSystems.push({ system: pSystem, velocities: velocities, age: 0 });
         }
 
         function handleLeftClick() {
-            if (isDead) return;
             const activeItem = inventorySlots[currentSlot - 1];
-            const activeType = activeItem ? activeItem.type : null;
+            const itemType = activeItem ? activeItem.type : null;
 
-            if (activeType === 'sword') swingSwordAnimation();
-            else if (activeType === 'arrow') { shootCrossbow(); return; }
-            else if (activeType === 'mace') swingMaceAnimation();
-            else if (activeType === 'enderpearl') { throwEnderPearl(); return; }
-
-            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-
-            const crystalHits = raycaster.intersectObjects(endCrystals, true);
-            if (crystalHits.length > 0) {
-                let hitObj = crystalHits[0].object;
-                while (hitObj.parent && hitObj.parent !== scene) hitObj = hitObj.parent;
-                detonateCrystal(hitObj);
+            if (itemType === 'sword') {
+                swingSwordAnimation();
+            } else if (itemType === 'mace') {
+                swingMaceAnimation();
+            } else if (itemType === 'arrow') {
+                shootCrossbow();
+                return;
+            } else if (itemType === 'enderpearl') {
+                throwEnderPearl();
+                return;
+            } else if (itemType === 'gapple') {
+                eatGoldenApple();
                 return;
             }
 
-            const fallDamageBonus = activeType === 'mace' ? Math.max(1, Math.abs(velocity.y) * 0.4) : 1;
-            const baseDmg = activeType === 'mace' ? Math.round(5 * fallDamageBonus) : 3;
+            raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
+            
+            // Check crystal detonation first
+            const crystalHits = raycaster.intersectObjects(endCrystals.map(c => c.children).flat(), true);
+            if (crystalHits.length > 0 && crystalHits[0].distance < 6.0) {
+                let rootCrystal = crystalHits[0].object;
+                while (rootCrystal.parent && rootCrystal.parent !== scene) {
+                    rootCrystal = rootCrystal.parent;
+                }
+                explodeCrystal(rootCrystal);
+                return;
+            }
 
-            if (broPlayerMesh || remotePlayerMesh) {
-                const targetBro = broPlayerMesh || remotePlayerMesh;
-                const broHits = raycaster.intersectObjects(targetBro.children, true);
-                if (broHits.length > 0) {
-                    if (gameMode === 'bro') {
-                        showActionText(`Hit Brother! (-${baseDmg} HP)`);
-                        spawnParticleExplosion(targetBro.position);
-                    } else if (gameMode === 'mp') {
-                        damageRemotePlayer(baseDmg);
-                        if (peerConn && peerConn.open) {
-                            peerConn.send({ type: 'hit_me', damage: baseDmg });
-                            peerConn.send({ type: 'damage', amount: baseDmg });
-                        }
-                        showActionText(`Hit Enemy Player! (-${baseDmg} HP)`);
-                        spawnParticleExplosion(targetBro.position);
-                    }
+            // Check dummy target hits
+            const dummyHits = raycaster.intersectObjects(dummyTargets, true);
+            if (dummyHits.length > 0 && dummyHits[0].distance < 5.0) {
+                showActionText("Hit Dummy Target!");
+                spawnParticleExplosion(dummyHits[0].point);
+                return;
+            }
+
+            // Check AI Steve or Bro player hit
+            if (aiSteveMesh) {
+                const aiHits = raycaster.intersectObject(aiSteveMesh, true);
+                if (aiHits.length > 0 && aiHits[0].distance < 4.5) {
+                    const dmg = itemType === 'mace' ? 6 : 3;
+                    damageAISteve(dmg);
+                    showActionText(`Hit AI Steve for ${dmg} DMG!`);
+                    spawnParticleExplosion(aiSteveMesh.position);
                     return;
                 }
             }
 
-            if (aiSteveMesh) {
-                const steveHits = raycaster.intersectObjects(aiSteveMesh.children, true);
-                if (steveHits.length > 0) {
-                    damageAISteve(baseDmg);
+            if (remotePlayerMesh) {
+                const remHits = raycaster.intersectObject(remotePlayerMesh, true);
+                if (remHits.length > 0 && remHits[0].distance < 4.5) {
+                    const dmg = itemType === 'mace' ? 6 : 3;
+                    if (gameMode === 'mp' && peerConn && peerConn.open) {
+                        peerConn.send({ type: 'damage', amount: dmg });
+                    }
+                    showActionText(`Hit Enemy Player for ${dmg} DMG!`);
+                    spawnParticleExplosion(remotePlayerMesh.position);
                     return;
                 }
             }
         }
 
         function handleRightClick() {
-            if (isDead) return;
             const activeItem = inventorySlots[currentSlot - 1];
-            const activeType = activeItem ? activeItem.type : null;
-
-            if (activeType === 'gapple') { eatGoldenApple(); return; }
-            if (activeType === 'firework') { useFireworkBoost(); return; }
-            if (activeType === 'enderpearl') { throwEnderPearl(); return; }
+            if (!activeItem || !activeItem.type) return;
 
             raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-            const intersects = raycaster.intersectObjects(placeableObjects, false);
+            const intersects = raycaster.intersectObjects(placeableObjects, true);
 
-            if (intersects.length > 0 && intersects[0].distance <= 6.5) {
+            if (intersects.length > 0 && intersects[0].distance < 5.0) {
                 const hit = intersects[0];
-                const point = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(0.5));
-                const gridX = Math.round(point.x);
-                const gridY = Math.round(point.y);
-                const gridZ = Math.round(point.z);
+                const p = hit.point.clone().add(hit.face.normal.clone().multiplyScalar(0.5));
+                const bx = Math.floor(p.x);
+                const by = Math.floor(p.y);
+                const bz = Math.floor(p.z);
 
-                if (activeType === 'obsidian' && activeItem.count > 0) {
-                    placeObsidianBlock(gridX, gridY, gridZ);
-                    if (peerConn && peerConn.open) peerConn.send({ type: 'obsidian', x: gridX, y: gridY, z: gridZ });
-                } else if (activeType === 'crystal' && activeItem.count > 0) {
-                    placeEndCrystal(gridX, gridY, gridZ);
-                    if (peerConn && peerConn.open) peerConn.send({ type: 'crystal', x: gridX, y: gridY, z: gridZ });
+                if (activeItem.type === 'obsidian' && activeItem.count > 0) {
+                    activeItem.count--;
+                    if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+                    renderHotbarUI();
+                    placeObsidianBlock(bx, by, bz);
+                } else if (activeItem.type === 'crystal' && activeItem.count > 0) {
+                    activeItem.count--;
+                    if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
+                    renderHotbarUI();
+                    placeEndCrystal(bx, by, bz);
                 }
             }
-        }
-
-        function placeObsidianBlock(x, y, z, isRemote = false) {
-            if (!isRemote) {
-                const activeItem = inventorySlots[currentSlot - 1];
-                if (!activeItem || activeItem.type !== 'obsidian' || activeItem.count <= 0) return;
-                activeItem.count--;
-                if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
-                renderHotbarUI();
-            }
-
-            playSound('place');
-
-            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
-            const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.4 });
-            const mesh = new THREE.Mesh(obsGeo, obsMat);
-            mesh.position.set(x, y, z);
-            scene.add(mesh);
-
-            placeableObjects.push(mesh);
-            solidColliders.push(mesh);
-        }
-
-        function placeEndCrystal(x, y, z, isRemote = false) {
-            if (!isRemote) {
-                const activeItem = inventorySlots[currentSlot - 1];
-                if (!activeItem || activeItem.type !== 'crystal' || activeItem.count <= 0) return;
-                activeItem.count--;
-                if (activeItem.count <= 0) inventorySlots[currentSlot - 1] = { type: null, count: 0 };
-                renderHotbarUI();
-            }
-
-            playSound('place');
-
-            const crystal = createEndCrystalMesh();
-            crystal.position.set(x, y, z);
-            scene.add(crystal);
-            endCrystals.push(crystal);
-        }
-
-        function detonateCrystal(crystalObj) {
-            playSound('explode');
-            spawnParticleExplosion(crystalObj.position);
-
-            const index = endCrystals.indexOf(crystalObj);
-            if (index > -1) endCrystals.splice(index, 1);
-            scene.remove(crystalObj);
-
-            const dist = camera.position.distanceTo(crystalObj.position);
-            if (dist < 6.0) {
-                const dmg = Math.round((6.0 - dist) * 1.5) + 3;
-                takeDamage(dmg, "End Crystal Explosion");
-                showActionText(`BOOM! End Crystal Damage (-${dmg} HP)`);
-            }
-        }
-
-        function spawnParticleExplosion(pos) {
-            const particleCount = 20;
-            const geo = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            const velocities = [];
-
-            for (let i = 0; i < particleCount; i++) {
-                positions[i * 3] = pos.x;
-                positions[i * 3 + 1] = pos.y + 0.5;
-                positions[i * 3 + 2] = pos.z;
-
-                velocities.push(new THREE.Vector3(
-                    (Math.random() - 0.5) * 8.0,
-                    Math.random() * 6.0 + 2.0,
-                    (Math.random() - 0.5) * 8.0
-                ));
-            }
-
-            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const mat = new THREE.PointsMaterial({ color: 0xffaa00, size: 0.25 });
-            const pSystem = new THREE.Points(geo, mat);
-
-            scene.add(pSystem);
-            particleSystems.push({ system: pSystem, vels: velocities, age: 0 });
         }
 
         function showActionText(msg) {
             const el = document.getElementById('action-text');
             el.innerText = msg;
             el.style.opacity = '1';
-            if (textTimeout) clearTimeout(textTimeout);
-            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2200);
+            clearTimeout(textTimeout);
+            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
             const time = performance.now();
-            const delta = Math.min((time - prevTime) / 1000, 0.1);
+            const delta = (time - prevTime) / 1000;
             prevTime = time;
 
-            if (!isDead) {
-                // Crystal Float Rotation Animation
-                endCrystals.forEach(c => {
-                    const outer = c.userData.outerCrystal;
-                    if (outer) {
-                        outer.rotation.y += 0.03;
-                        outer.position.y = 0.85 + Math.sin(time * 0.003 + c.userData.floatOffset) * 0.1;
-                    }
-                });
+            if (controls.isLocked || isMobile) {
+                const speed = 11.0;
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
 
-                // Ender Pearls Projectiles Update
-                for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
-                    const pearlData = activeEnderPearls[i];
-                    pearlData.age += delta;
-
-                    pearlData.velocity.y -= 18.0 * delta; // Gravity
-                    pearlData.mesh.position.addScaledVector(pearlData.velocity, delta);
-
-                    if (pearlData.mesh.position.y <= 0.5 || pearlData.age > 4.0) {
-                        // Teleport player to pearl landing position!
-                        controls.getObject().position.set(
-                            pearlData.mesh.position.x,
-                            Math.max(0.5, pearlData.mesh.position.y) + PLAYER_EYE_HEIGHT,
-                            pearlData.mesh.position.z
-                        );
-
-                        takeDamage(1, "Ender Pearl Fall"); // Pearl teleport self damage
-                        playSound('pearl');
-                        spawnParticleExplosion(pearlData.mesh.position);
-
-                        scene.remove(pearlData.mesh);
-                        activeEnderPearls.splice(i, 1);
-                        showActionText("Ender Pearl Teleported You!");
-                    }
+                if (!isGliding) {
+                    velocity.y -= 35.0 * delta; // Gravity
+                } else {
+                    velocity.y = -2.0; // Slow glide descent
+                    if (moveForward) velocity.z -= speed * 2.5 * delta;
                 }
 
-                // Crossbow Rocket Arrows Update
-                for (let i = activeArrows.length - 1; i >= 0; i--) {
-                    const arrow = activeArrows[i];
-                    arrow.age += delta;
-                    arrow.mesh.position.addScaledVector(arrow.dir, delta);
+                const dir = new THREE.Vector3();
+                camera.getWorldDirection(dir);
+                dir.y = 0;
+                dir.normalize();
 
-                    let hitDetected = false;
-                    if (arrow.isFromBot) {
-                        const distToPlayer = arrow.mesh.position.distanceTo(camera.position);
-                        if (distToPlayer < 1.2) {
-                            hitDetected = true;
-                            takeDamage(3, "AI Steve");
-                            showActionText("Hit by AI Steve's Crossbow!");
-                        }
-                    } else {
-                        if (aiSteveMesh) {
-                            const distToSteve = arrow.mesh.position.distanceTo(aiSteveMesh.position);
-                            if (distToSteve < 1.4) {
-                                hitDetected = true;
-                                damageAISteve(4);
-                                showActionText("Rocket Arrow Hit AI Steve!");
-                            }
-                        }
-                    }
+                const sideDir = new THREE.Vector3(-dir.z, 0, dir.x);
 
-                    if (hitDetected || arrow.mesh.position.y <= 0 || arrow.age > 3.0) {
-                        spawnParticleExplosion(arrow.mesh.position);
-                        scene.remove(arrow.mesh);
-                        activeArrows.splice(i, 1);
-                    }
+                if (moveForward) {
+                    velocity.x += dir.x * speed * delta * 10;
+                    velocity.z += dir.z * speed * delta * 10;
+                }
+                if (moveBackward) {
+                    velocity.x -= dir.x * speed * delta * 10;
+                    velocity.z -= dir.z * speed * delta * 10;
+                }
+                if (moveLeft) {
+                    velocity.x += sideDir.x * speed * delta * 10;
+                    velocity.z += sideDir.z * speed * delta * 10;
+                }
+                if (moveRight) {
+                    velocity.x -= sideDir.x * speed * delta * 10;
+                    velocity.z -= sideDir.z * speed * delta * 10;
                 }
 
-                // Particle System Physics Update
-                for (let i = particleSystems.length - 1; i >= 0; i--) {
-                    const ps = particleSystems[i];
-                    ps.age += delta;
-                    const posAttr = ps.system.geometry.attributes.position;
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
 
-                    for (let j = 0; j < ps.vels.length; j++) {
-                        ps.vels[j].y -= 9.8 * delta;
-                        posAttr.setXYZ(
-                            j,
-                            posAttr.getX(j) + ps.vels[j].x * delta,
-                            posAttr.getY(j) + ps.vels[j].y * delta,
-                            posAttr.getZ(j) + ps.vels[j].z * delta
-                        );
-                    }
-                    posAttr.needsUpdate = true;
+                let pPos = controls.getObject().position;
+                pPos.y += velocity.y * delta;
 
-                    if (ps.age > 0.8) {
-                        scene.remove(ps.system);
-                        particleSystems.splice(i, 1);
-                    }
+                const groundLimit = 0.5 + PLAYER_EYE_HEIGHT;
+                if (pPos.y < groundLimit) {
+                    pPos.y = groundLimit;
+                    velocity.y = 0;
+                    canJump = true;
+                    isGliding = false;
                 }
 
-                // Player Movement Physics
-                if (controls.isLocked || isMobile) {
-                    velocity.x -= velocity.x * 10.0 * delta;
-                    velocity.z -= velocity.z * 10.0 * delta;
-
-                    if (isGliding) {
-                        velocity.y -= 3.0 * delta;
-                    } else {
-                        velocity.y -= 25.0 * delta;
-                    }
-
-                    const moveDir = new THREE.Vector3();
-                    if (moveForward) moveDir.z -= 1;
-                    if (moveBackward) moveDir.z += 1;
-                    if (moveLeft) moveDir.x -= 1;
-                    if (moveRight) moveDir.x += 1;
-                    moveDir.normalize();
-
-                    if (moveForward || moveBackward) velocity.z += moveDir.z * 50.0 * delta;
-                    if (moveLeft || moveRight) velocity.x += moveDir.x * 50.0 * delta;
-
-                    controls.moveRight(-velocity.x * delta);
-                    controls.moveForward(-velocity.z * delta);
-
-                    const playerObj = controls.getObject();
-                    playerObj.position.y += velocity.y * delta;
-
-                    // Arena Floor Detection
-                    if (playerObj.position.y <= 0.5 + PLAYER_EYE_HEIGHT) {
-                        velocity.y = 0;
-                        playerObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
-                        canJump = true;
-                        isGliding = false;
-                    }
-
-                    broadcastPlayerPos();
+                const arenaRadius = 34;
+                const distFromCenter = Math.sqrt(pPos.x * pPos.x + pPos.z * pPos.z);
+                if (distFromCenter > arenaRadius) {
+                    const angle = Math.atan2(pPos.z, pPos.x);
+                    pPos.x = Math.cos(angle) * arenaRadius;
+                    pPos.z = Math.sin(angle) * arenaRadius;
                 }
 
-                // AI Steve Bot Behavior Updates
-                if (gameMode === 'ai') updateAISteveLogic(delta);
+                broadcastPlayerPos();
+            }
+
+            // Update End Crystals animation
+            endCrystals.forEach(c => {
+                c.rotation.y += delta * 1.5;
+                if (c.userData && c.userData.outerCrystal) {
+                    c.userData.outerCrystal.position.y = 0.85 + Math.sin(time * 0.005 + c.userData.floatOffset) * 0.15;
+                }
+            });
+
+            // Update Projectiles (Arrows & Ender Pearls)
+            for (let i = activeArrows.length - 1; i >= 0; i--) {
+                const arrow = activeArrows[i];
+                arrow.mesh.position.addScaledVector(arrow.dir, delta);
+                arrow.age += delta;
+
+                if (arrow.age > 4.0 || arrow.mesh.position.y < 0) {
+                    scene.remove(arrow.mesh);
+                    activeArrows.splice(i, 1);
+                }
+            }
+
+            for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
+                const pearl = activeEnderPearls[i];
+                pearl.velY -= 15.0 * delta;
+                pearl.mesh.position.addScaledVector(pearl.dir, delta);
+                pearl.mesh.position.y += pearl.velY * delta;
+                pearl.age += delta;
+
+                if (pearl.age > 5.0 || pearl.mesh.position.y <= 0.5) {
+                    controls.getObject().position.copy(pearl.mesh.position);
+                    controls.getObject().position.y += PLAYER_EYE_HEIGHT;
+                    playSound('eat');
+                    spawnParticleExplosion(pearl.mesh.position);
+                    scene.remove(pearl.mesh);
+                    activeEnderPearls.splice(i, 1);
+                    showActionText("Ender Pearl Teleport!");
+                }
+            }
+
+            // Update Particle Explosions
+            for (let i = particleSystems.length - 1; i >= 0; i--) {
+                const ps = particleSystems[i];
+                ps.age += delta;
+                const posArr = ps.system.geometry.attributes.position.array;
+                const vels = ps.velocities;
+
+                for (let j = 0; j < vels.length / 3; j++) {
+                    posArr[j * 3] += vels[j * 3] * delta;
+                    posArr[j * 3 + 1] += vels[j * 3 + 1] * delta;
+                    posArr[j * 3 + 2] += vels[j * 3 + 2] * delta;
+                    vels[j * 3 + 1] -= 9.8 * delta; // Gravity
+                }
+                ps.system.geometry.attributes.position.needsUpdate = true;
+                ps.system.material.opacity = Math.max(0, 1.0 - ps.age / 1.0);
+
+                if (ps.age > 1.0) {
+                    scene.remove(ps.system);
+                    particleSystems.splice(i, 1);
+                }
+            }
+
+            // Update AI Bot Logic if active
+            if (gameMode === 'ai' && aiSteveMesh) {
+                updateAISteveLogic(delta);
             }
 
             renderer.render(scene, camera);
