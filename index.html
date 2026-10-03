@@ -164,12 +164,12 @@
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
-        <div id="action-text">Arena Floor Setting Updated!</div>
+        <div id="action-text">Void Island Arena Created!</div>
 
         <!-- Minecraft Style "YOU DIED" Overlay -->
         <div id="death-screen">
             <h1>You Died!</h1>
-            <p id="death-msg">You were slain in battle!</p>
+            <p id="death-msg">You fell into the void!</p>
             <button class="death-btn" onclick="respawnPlayer()">Respawn</button>
         </div>
 
@@ -229,7 +229,7 @@
         <!-- Start Overlay -->
         <div id="blocker">
             <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
+                <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP (VOID ARENA)</h1>
                 
                 <div style="background: #111; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #333;">
                     <div class="option-group">
@@ -307,7 +307,7 @@
             enderpearl: { name: 'Ender Pearl', icon: '🟣' }
         };
 
-        // 27 Total slots (0-8: Hotbar, 9-26: Main Inventory)
+        // 27 Total slots (0-8: Hotbar, 9-26: Main Inventory) - Barrels removed!
         let inventorySlots = [
             // Default Hotbar (0 to 8)
             { type: 'sword', count: 1 },
@@ -430,16 +430,17 @@
             isMobile = detectMobile();
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x5c88c7);
-            scene.fog = new THREE.FogExp2(0x5c88c7, 0.005);
+            // Dark End-Sky / Void background
+            scene.background = new THREE.Color(0x0b0813);
+            scene.fog = new THREE.FogExp2(0x0b0813, 0.012);
 
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
             raycaster = new THREE.Raycaster();
 
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            const ambientLight = new THREE.AmbientLight(0x8877aa, 0.8);
             scene.add(ambientLight);
 
-            const sunLight = new THREE.DirectionalLight(0xfff5ea, 0.9);
+            const sunLight = new THREE.DirectionalLight(0xffddaa, 1.0);
             sunLight.position.set(50, 100, 50);
             scene.add(sunLight);
 
@@ -485,7 +486,7 @@
             scene.add(controls.getObject());
             controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
 
-            buildColosseumArenaInstanced();
+            buildVoidIslandArena();
             buildHeldItemModels();
             spawnDummyTargets();
             setupControls();
@@ -619,7 +620,7 @@
             isDead = true;
             playSound('explode');
 
-            document.getElementById('death-msg').innerText = `You were slain by ${killerName}!`;
+            document.getElementById('death-msg').innerText = killerName === "The Void" ? "You fell into the void!" : `You were slain by ${killerName}!`;
             document.getElementById('death-screen').style.display = 'flex';
 
             if (!isMobile) controls.unlock();
@@ -772,7 +773,7 @@
 
         function spawnAISteve() {
             aiSteveMesh = createStevePlayerMesh(0x00ffaa, true);
-            aiSteveMesh.position.set(10, 0.5, 10);
+            aiSteveMesh.position.set(6, 0.5, 6);
             aiSteveMesh.name = "ai_steve";
 
             aiSteveHealthBarMesh = createOverheadHealthBar();
@@ -785,7 +786,7 @@
 
         function spawnBrotherPlayer() {
             broPlayerMesh = createStevePlayerMesh(0xff0055, false);
-            broPlayerMesh.position.set(-8, 0.5, -8);
+            broPlayerMesh.position.set(-6, 0.5, -6);
             broPlayerMesh.name = "brother_player";
 
             const nameTag = createOverheadHealthBar();
@@ -867,11 +868,11 @@
 
             const flash = document.getElementById('flash-overlay');
             flash.style.background = 'rgba(255, 0, 0, 0.4)';
-            setTimeout(() => { flash.style.background = 'rgba(255, 0, 0, 0)'; }, 100);
+            setTimeout(() => { flash.style.background = 'rgba(255, 0, 0)'; }, 100);
 
             if (playerHealth <= 0) {
                 let totemSlotIndex = inventorySlots.findIndex(s => s && s.type === 'totem' && s.count > 0);
-                if (totemSlotIndex !== -1) {
+                if (totemSlotIndex !== -1 && attackerName !== "The Void") {
                     inventorySlots[totemSlotIndex].count--;
                     if (inventorySlots[totemSlotIndex].count <= 0) {
                         inventorySlots[totemSlotIndex] = { type: null, count: 0 };
@@ -940,6 +941,22 @@
 
         function updateAISteveLogic(delta) {
             if (!aiSteveMesh) return;
+            
+            // Check if AI Steve fell into the void
+            if (aiSteveMesh.position.y < -15) {
+                showActionText("AI STEVE FELL INTO THE VOID!");
+                scene.remove(aiSteveMesh);
+                aiSteveMesh = null;
+                setTimeout(() => {
+                    if (gameMode === 'ai') {
+                        aiSteveTotems = 64;
+                        aiSteveHealth = maxHealth;
+                        spawnAISteve();
+                    }
+                }, 3000);
+                return;
+            }
+
             if (aiSteveHealthBarMesh) aiSteveHealthBarMesh.lookAt(camera.position);
 
             const playerPos = camera.position;
@@ -973,18 +990,21 @@
                 aiSteveMesh.position.y += aiSteveVerticalVel * delta;
 
                 if (aiSteveMesh.position.y <= 0.5) {
-                    aiSteveMesh.position.y = 0.5;
-                    aiSteveVerticalVel = 0;
+                    const isOverVoid = Math.abs(aiSteveMesh.position.x) > 15 || Math.abs(aiSteveMesh.position.z) > 15;
+                    if (!isOverVoid) {
+                        aiSteveMesh.position.y = 0.5;
+                        aiSteveVerticalVel = 0;
 
-                    if (aiSteveIsSmashing) {
-                        aiSteveIsSmashing = false;
-                        playSound('mace');
-                        spawnParticleExplosion(aiSteveMesh.position);
+                        if (aiSteveIsSmashing) {
+                            aiSteveIsSmashing = false;
+                            playSound('mace');
+                            spawnParticleExplosion(aiSteveMesh.position);
 
-                        if (dist < 4.0) {
-                            const smashDmg = botDifficulty === 'hard' ? 7 : botDifficulty === 'medium' ? 5 : 3;
-                            takeDamage(smashDmg, "AI Steve");
-                            showActionText("AI STEVE LANDED A MACE SMASH ATTACK!");
+                            if (dist < 4.0) {
+                                const smashDmg = botDifficulty === 'hard' ? 7 : botDifficulty === 'medium' ? 5 : 3;
+                                takeDamage(smashDmg, "AI Steve");
+                                showActionText("AI STEVE LANDED A MACE SMASH ATTACK!");
+                            }
                         }
                     }
                 }
@@ -1031,7 +1051,7 @@
 
             if (!remotePlayerMesh) {
                 remotePlayerMesh = createStevePlayerMesh(0xff0055, false);
-                remotePlayerMesh.position.set(-10, 0.5, -10);
+                remotePlayerMesh.position.set(-6, 0.5, -6);
                 
                 remotePlayerHealthBarMesh = createOverheadHealthBar();
                 remotePlayerHealthBarMesh.position.set(0, 2.2, 0);
@@ -1131,110 +1151,61 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        function buildColosseumArenaInstanced() {
+        /* Build Sky/Void Floating Island Arena */
+        function buildVoidIslandArena() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-            const radius = 35;
+            const radius = 15;
 
-            const sandMat = new THREE.MeshStandardMaterial({ color: 0xd2b48c, roughness: 0.9 });
-            const stoneMat = new THREE.MeshStandardMaterial({ color: 0x666666, roughness: 0.8 });
-            const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.8 });
-            const pillarMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.5 });
-            const roofMat = new THREE.MeshStandardMaterial({ color: 0x8b4513, roughness: 0.7 });
-            const leafMat = new THREE.MeshStandardMaterial({ color: 0x2e8b57, roughness: 0.6 });
+            const obsMat = new THREE.MeshStandardMaterial({ color: 0x110a1f, roughness: 0.4 });
+            const endStoneMat = new THREE.MeshStandardMaterial({ color: 0xdddd99, roughness: 0.8 });
+            const darkStoneMat = new THREE.MeshStandardMaterial({ color: 0x332244, roughness: 0.8 });
 
-            // Create extended terrain so walking outside floor looks continuous
-            const sandPositions = [];
-            const outerFloorRadius = 100;
-            for (let x = -outerFloorRadius; x <= outerFloorRadius; x++) {
-                for (let z = -outerFloorRadius; z <= outerFloorRadius; z++) {
-                    sandPositions.push(new THREE.Vector3(x, 0, z));
-                }
-            }
+            const islandPositions = [];
 
-            const sandInstanced = new THREE.InstancedMesh(boxGeo, sandMat, sandPositions.length);
-            const dummyMatrix = new THREE.Matrix4();
-            sandPositions.forEach((pos, i) => {
-                dummyMatrix.setPosition(pos);
-                sandInstanced.setMatrixAt(i, dummyMatrix);
-
-                const invisibleMesh = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ visible: false }));
-                invisibleMesh.position.copy(pos);
-                scene.add(invisibleMesh);
-                placeableObjects.push(invisibleMesh);
-            });
-            sandInstanced.instanceMatrix.needsUpdate = true;
-            scene.add(sandInstanced);
-
-            function getRingTransforms(ringRadius, startY, height) {
-                const transforms = [];
-                const circumference = 2 * Math.PI * ringRadius;
-                const steps = Math.ceil(circumference * 1.5);
-                for (let i = 0; i < steps; i++) {
-                    const angle = (i / steps) * Math.PI * 2;
-                    const x = Math.round(Math.cos(angle) * ringRadius);
-                    const z = Math.round(Math.sin(angle) * ringRadius);
-                    for (let y = 0; y < height; y++) {
-                        transforms.push({ x, y: startY + y, z, sx: 1, sy: 1, sz: 1 });
+            // Floating Central Platform (Endstone Top)
+            for (let x = -radius; x <= radius; x++) {
+                for (let z = -radius; z <= radius; z++) {
+                    const dist = Math.hypot(x, z);
+                    if (dist <= radius) {
+                        islandPositions.push({ pos: new THREE.Vector3(x, 0, z), mat: endStoneMat, placeable: true });
+                        
+                        // Tapered Island underside into the void
+                        const depth = Math.floor((radius - dist) * 0.8) + 1;
+                        for (let y = 1; y <= depth; y++) {
+                            islandPositions.push({ pos: new THREE.Vector3(x, -y, z), mat: y > 2 ? obsMat : darkStoneMat, placeable: false });
+                        }
                     }
                 }
-                return transforms;
             }
 
-            const darkStoneTransforms = getRingTransforms(radius + 1, 1, 4);
-            const stoneTransforms = [];
+            islandPositions.forEach((item) => {
+                const mesh = new THREE.Mesh(boxGeo, item.mat);
+                mesh.position.copy(item.pos);
+                scene.add(mesh);
 
-            for (let tier = 0; tier < 8; tier++) {
-                const currentRadius = radius + 2 + tier;
-                const tierHeight = 4 + tier;
-                stoneTransforms.push(...getRingTransforms(currentRadius, tierHeight, 1));
-                for (let y = 1; y < tierHeight; y++) {
-                    darkStoneTransforms.push(...getRingTransforms(currentRadius, y, 1));
+                if (item.placeable) {
+                    placeableObjects.push(mesh);
+                    solidColliders.push(mesh);
                 }
-            }
+            });
 
-            const pillarRadius = radius + 10;
-            const pillarTransforms = [];
-            const leafTransforms = [];
-
-            for (let i = 0; i < 24; i++) {
-                const angle = (i / 24) * Math.PI * 2;
-                const px = Math.cos(angle) * pillarRadius;
-                const pz = Math.sin(angle) * pillarRadius;
-
-                for (let ph = 0; ph < 8; ph++) {
-                    pillarTransforms.push({ x: px, y: 12 + ph, z: pz, sx: 1.5, sy: 1, sz: 1.5 });
+            // Outer Obsidian Pillars floating around the void island
+            const pillarAngles = [0, Math.PI/2, Math.PI, Math.PI * 1.5];
+            pillarAngles.forEach(angle => {
+                const px = Math.round(Math.cos(angle) * 12);
+                const pz = Math.round(Math.sin(angle) * 12);
+                for (let py = 1; py <= 5; py++) {
+                    const pMesh = new THREE.Mesh(boxGeo, obsMat);
+                    pMesh.position.set(px, py, pz);
+                    scene.add(pMesh);
+                    placeableObjects.push(pMesh);
+                    solidColliders.push(pMesh);
                 }
-                leafTransforms.push({ x: px * 0.95, y: 12, z: pz * 0.95, sx: 1.5, sy: 1.5, sz: 1.5 });
-            }
-
-            stoneTransforms.push(...getRingTransforms(pillarRadius - 1, 20, 1));
-            stoneTransforms.push(...getRingTransforms(pillarRadius, 20, 1));
-            stoneTransforms.push(...getRingTransforms(pillarRadius + 1, 20, 1));
-            const roofTransforms = getRingTransforms(pillarRadius, 21, 1);
-
-            function createBatchMesh(geometry, material, transforms) {
-                if (transforms.length === 0) return;
-                const instanced = new THREE.InstancedMesh(geometry, material, transforms.length);
-                const mat = new THREE.Matrix4();
-                const scaleVec = new THREE.Vector3();
-                transforms.forEach((t, i) => {
-                    scaleVec.set(t.sx || 1, t.sy || 1, t.sz || 1);
-                    mat.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion(), scaleVec);
-                    instanced.setMatrixAt(i, mat);
-                });
-                instanced.instanceMatrix.needsUpdate = true;
-                scene.add(instanced);
-            }
-
-            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms);
-            createBatchMesh(boxGeo, stoneMat, stoneTransforms);
-            createBatchMesh(boxGeo, pillarMat, pillarTransforms);
-            createBatchMesh(boxGeo, leafMat, leafTransforms);
-            createBatchMesh(boxGeo, roofMat, roofTransforms);
+            });
         }
 
         function spawnDummyTargets() {
-            const dummyPositions = [ { x: 5, z: -5 }, { x: -6, z: -8 }, { x: 8, z: 6 } ];
+            const dummyPositions = [ { x: 4, z: -4 }, { x: -5, z: -5 } ];
             dummyPositions.forEach(p => {
                 const dummyGroup = createStevePlayerMesh(0x964B00, false);
                 dummyGroup.position.set(p.x, 0.5, p.z);
@@ -1368,7 +1339,7 @@
                         if (canJump) { 
                             velocity.y += 11.0; 
                             canJump = false; 
-                        } else if (activeItem && activeItem.type === 'firework' && !isGliding && controls.getObject().position.y > 3.0) {
+                        } else if (activeItem && activeItem.type === 'firework' && !isGliding) {
                             isGliding = true;
                             showActionText("Elytra Gliding Activated!");
                         }
@@ -1865,7 +1836,7 @@
                         }
                     }
 
-                    if (hitDetected || arrow.mesh.position.y <= 0 || arrow.age > 3.0) {
+                    if (hitDetected || arrow.mesh.position.y <= -20 || arrow.age > 3.0) {
                         spawnParticleExplosion(arrow.mesh.position);
                         scene.remove(arrow.mesh);
                         activeArrows.splice(i, 1);
@@ -1922,12 +1893,18 @@
                     const playerObj = controls.getObject();
                     playerObj.position.y += velocity.y * delta;
 
-                    // Arena Floor Detection
-                    if (playerObj.position.y <= 0.5 + PLAYER_EYE_HEIGHT) {
+                    // Island Surface Ground Collision Check (Inside 15-block radius)
+                    const distFromCenter = Math.hypot(playerObj.position.x, playerObj.position.z);
+                    if (distFromCenter <= 15.5 && playerObj.position.y <= 0.5 + PLAYER_EYE_HEIGHT) {
                         velocity.y = 0;
                         playerObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
                         canJump = true;
                         isGliding = false;
+                    }
+
+                    // Void Fall Detection Trigger
+                    if (playerObj.position.y < -15.0) {
+                        triggerDeath("The Void");
                     }
 
                     broadcastPlayerPos();
