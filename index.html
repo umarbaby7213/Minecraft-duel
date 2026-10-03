@@ -283,7 +283,7 @@
         const activeArrows = [];
         const activeEnderPearls = [];
         const placeableObjects = [];
-        const solidColliders = []; // Thick solid walls & blocks collision array
+        const solidColliders = []; 
         const endCrystals = [];
         const dummyTargets = [];
         const particleSystems = [];
@@ -828,7 +828,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        /* --- Thick Arena Walls & Solid Block Colliders --- */
         function buildColosseumArenaInstanced() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
             const radius = 35;
@@ -1056,8 +1055,8 @@
                 switch (e.code) {
                     case 'KeyW': moveForward = true; break;
                     case 'KeyS': moveBackward = true; break;
-                    case 'KeyA': moveLeft = true; break;
-                    case 'KeyD': moveRight = true; break;
+                    case 'KeyA': moveRight = true; break; // Fixed: A moves left, D moves right
+                    case 'KeyD': moveLeft = true; break;  // Fixed: A moves left, D moves right
                     case 'Space': 
                         if (canJump) { 
                             velocity.y += 11.0; 
@@ -1084,8 +1083,8 @@
                 switch (e.code) {
                     case 'KeyW': moveForward = false; break;
                     case 'KeyS': moveBackward = false; break;
-                    case 'KeyA': moveLeft = false; break;
-                    case 'KeyD': moveRight = false; break;
+                    case 'KeyA': moveRight = false; break;
+                    case 'KeyD': moveLeft = false; break;
                 }
             });
 
@@ -1164,8 +1163,8 @@
 
                 moveForward = dy < -10;
                 moveBackward = dy > 10;
-                moveLeft = dx < -10;
-                moveRight = dx > 10;
+                moveLeft = dx > 10;
+                moveRight = dx < -10;
             }
 
             document.getElementById('btn-inv').addEventListener('touchstart', (e) => {
@@ -1394,7 +1393,7 @@
             scene.add(mesh);
 
             placeableObjects.push(mesh);
-            solidColliders.push(mesh); // Added to thick solid collision blocks
+            solidColliders.push(mesh);
         }
 
         function placeEndCrystal(x, y, z) {
@@ -1507,7 +1506,6 @@
             textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
         }
 
-        /* --- Main Animation Loop with Thick Solid & Void Collision Logic --- */
         function animate() {
             requestAnimationFrame(animate);
 
@@ -1520,9 +1518,9 @@
                 velocity.z -= velocity.z * 10.0 * delta;
 
                 if (!isGliding) {
-                    velocity.y -= 28.0 * delta; // Gravity
+                    velocity.y -= 28.0 * delta;
                 } else {
-                    velocity.y -= 5.0 * delta; // Gliding gravity
+                    velocity.y -= 5.0 * delta;
                     velocity.z += 10.0 * delta;
                 }
 
@@ -1545,15 +1543,12 @@
                 camObj.position.x += velocity.x * delta;
                 camObj.position.z += velocity.z * delta;
 
-                // --- Thick Wall & Placed Blocks Solid Collision vs Void Check ---
                 const playerRadius = 0.4;
                 const distFromCenter = Math.sqrt(camObj.position.x * camObj.position.x + camObj.position.z * camObj.position.z);
                 const arenaRadius = 35;
 
-                // Check if player is inside the void (outside arena radius)
                 const isInVoid = distFromCenter > arenaRadius;
 
-                // Solid collision against arena walls & placed blocks (only when NOT in the void)
                 if (!isInVoid) {
                     for (let i = 0; i < solidColliders.length; i++) {
                         const box = solidColliders[i];
@@ -1570,7 +1565,6 @@
                         if (camObj.position.x > minX && camObj.position.x < maxX &&
                             camObj.position.z > minZ && camObj.position.z < maxZ &&
                             camObj.position.y > minY && camObj.position.y < maxY) {
-                            // Revert horizontal movement if colliding with solid walls/blocks
                             camObj.position.x = oldPos.x;
                             camObj.position.z = oldPos.z;
                             velocity.x = 0;
@@ -1580,18 +1574,15 @@
                     }
                 }
 
-                // Vertical position & Void collision behavior
                 camObj.position.y += velocity.y * delta;
 
-                // If in void, collision with floor is false -> player falls into void!
                 const floorLimit = isInVoid ? -50.0 : 0.5;
 
                 if (camObj.position.y <= floorLimit) {
                     if (isInVoid) {
-                        // Fallen into void
                         showActionText("FALLEN INTO THE VOID!");
-                        takeDamage(maxHealth); // Instant death / totem pop
-                        camObj.position.set(0, 15, 0); // Respawn high up
+                        takeDamage(maxHealth);
+                        camObj.position.set(0, 15, 0);
                         velocity.set(0, 0, 0);
                         isGliding = false;
                     } else {
@@ -1605,7 +1596,6 @@
                 broadcastPlayerPos();
             }
 
-            // Update End Crystals floating animation
             endCrystals.forEach(c => {
                 c.userData.floatOffset += delta * 3;
                 c.position.y += Math.sin(c.userData.floatOffset) * 0.003;
@@ -1614,7 +1604,6 @@
                 }
             });
 
-            // Update Arrows
             for (let i = activeArrows.length - 1; i >= 0; i--) {
                 const arr = activeArrows[i];
                 arr.mesh.position.add(arr.dir.clone().multiplyScalar(delta));
@@ -1626,7 +1615,6 @@
                 }
             }
 
-            // Update Ender Pearls
             for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
                 const pearl = activeEnderPearls[i];
                 pearl.mesh.position.add(pearl.velocity.clone().multiplyScalar(delta));
@@ -1643,7 +1631,6 @@
                 }
             }
 
-            // Update Particles
             for (let i = particleSystems.length - 1; i >= 0; i--) {
                 const p = particleSystems[i];
                 p.mesh.position.add(p.vel.clone().multiplyScalar(delta));
