@@ -4,11 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Donut SMP - End Crystal PvP</title>
-    <!-- Import authentic pixelated font -->
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Press Start 2P', monospace; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
         #game-container { width: 100vw; height: 100vh; position: relative; }
         
         /* Crosshair */
@@ -24,7 +22,7 @@
         #totem-pop-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0);
             pointer-events: none; z-index: 8; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.27);
-            font-size: 100px; text-shadow: 0 0 20px #ffaa00;
+            font-size: 130px; text-shadow: 0 0 20px #ffaa00;
         }
         #totem-pop-overlay.active { transform: translate(-50%, -50%) scale(1.4); }
 
@@ -37,13 +35,13 @@
         #death-box {
             text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.92);
             border: 4px solid #ff0000; box-shadow: 0 0 35px #ff0000; border-radius: 6px;
-            width: 440px; max-width: 90%;
+            width: 420px; max-width: 90%;
         }
-        #death-box h1 { color: #ff2222; font-size: 22px; font-weight: bold; text-shadow: 3px 3px #000; margin-bottom: 12px; letter-spacing: 1px; }
-        #death-box p { color: #ccc; font-size: 11px; margin-bottom: 20px; font-weight: bold; text-shadow: 1px 1px #000; line-height: 1.5; }
+        #death-box h1 { color: #ff2222; font-size: 38px; font-weight: bold; text-shadow: 3px 3px #000; margin-bottom: 8px; letter-spacing: 2px; }
+        #death-box p { color: #ccc; font-size: 14px; margin-bottom: 20px; font-weight: bold; text-shadow: 1px 1px #000; }
         .respawn-btn {
-            background: #555; color: #fff; border: 3px solid #888; padding: 12px 20px;
-            font-size: 12px; font-weight: bold; cursor: pointer; font-family: inherit;
+            background: #555; color: #fff; border: 3px solid #888; padding: 12px 30px;
+            font-size: 16px; font-weight: bold; cursor: pointer; font-family: inherit;
             border-radius: 4px; box-shadow: 0 4px #222;
         }
         .respawn-btn:hover { background: #666; border-color: #aaa; }
@@ -105,11 +103,11 @@
         /* Inventory & Hotbar UI */
         #hotbar-wrapper { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
         #hotbar { display: flex; background: rgba(0, 0, 0, 0.7); border: 3px solid #3c3c3c; border-radius: 4px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .slot { width: 40px; height: 40px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 14px; position: relative; cursor: pointer; }
+        .slot { width: 40px; height: 40px; border: 2px solid #8b8b8b; background: rgba(139, 139, 139, 0.3); margin: 2px; display: flex; justify-content: center; align-items: center; color: #fff; font-size: 16px; position: relative; cursor: pointer; }
         .slot.active { border-color: #ffffff; background: rgba(255, 255, 255, 0.4); box-shadow: inset 0 0 8px #fff; }
         .slot.selected-drag { border-color: #ffaa00; background: rgba(255, 170, 0, 0.5); }
-        .slot-num { position: absolute; top: 1px; left: 2px; font-size: 7px; color: #aaa; font-weight: bold; }
-        .count-badge { position: absolute; bottom: 1px; right: 2px; font-size: 8px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
+        .slot-num { position: absolute; top: 1px; left: 2px; font-size: 8px; color: #aaa; font-weight: bold; }
+        .count-badge { position: absolute; bottom: 1px; right: 2px; font-size: 9px; color: #fff; font-weight: bold; text-shadow: 1px 1px #000; }
 
         /* Full Inventory GUI Screen (Opened with 'E') */
         #inventory-screen {
@@ -118,9 +116,9 @@
             padding: 15px; display: none; flex-direction: column; gap: 10px; z-index: 20;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.8); pointer-events: auto;
         }
-        #inventory-screen h3 { color: #373737; font-size: 11px; margin-bottom: 5px; text-align: center; font-weight: bold; }
+        #inventory-screen h3 { color: #373737; font-size: 16px; margin-bottom: 5px; text-align: center; font-weight: bold; }
         .inv-grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; background: #8b8b8b; padding: 6px; border: 3px solid #373737; }
-        .inv-slot { width: 34px; height: 34px; background: #8b8b8b; border: 2px solid #373737; display: flex; justify-content: center; align-items: center; font-size: 14px; cursor: pointer; position: relative; }
+        .inv-slot { width: 34px; height: 34px; background: #8b8b8b; border: 2px solid #373737; display: flex; justify-content: center; align-items: center; font-size: 16px; cursor: pointer; position: relative; }
         .inv-slot:hover { background: #aaaaaa; }
         .inv-slot.selected-drag { border-color: #ffaa00; background: #d4a373; }
 
@@ -129,27 +127,27 @@
         #joystick-knob { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; }
         
         #mobile-buttons { position: absolute; bottom: 20px; right: 20px; display: none; flex-direction: column; gap: 8px; z-index: 6; }
-        .mobile-btn { width: 54px; height: 54px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 10px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
+        .mobile-btn { width: 54px; height: 54px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 12px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
         .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         /* Action Text Overlay */
-        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 12px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; text-align: center; width: 100%; }
+        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
         /* Settings Options UI */
         .option-group { display: flex; flex-direction: column; gap: 4px; text-align: left; margin-bottom: 8px; }
-        .option-group label { color: #aaa; font-size: 10px; font-weight: bold; }
-        .option-select, .option-input { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #ffaa00; border-radius: 4px; font-family: inherit; font-size: 10px; }
+        .option-group label { color: #aaa; font-size: 12px; font-weight: bold; }
+        .option-select, .option-input { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #ffaa00; border-radius: 4px; font-family: inherit; font-size: 13px; }
 
         /* Start Screen Blocker */
         #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 30; }
         #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; max-height: 90vh; overflow-y: auto; }
-        .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
         .mode-btn:hover { background: #ff3377; }
-        #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 12px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; font-family: inherit; }
+        #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
         
         /* Multiplayer Buttons Group */
         .mp-btn-container { display: flex; gap: 10px; width: 100%; }
-        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 10px; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -183,9 +181,9 @@
 
         <!-- Full Inventory GUI Screen (Opened with 'E') -->
         <div id="inventory-screen">
-            <h3>PLAYER INVENTORY (Press E to Close)</h3>
+            <h3>PLAYER INVENTORY (Press E to Close)[cite: 3]</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
-            <p style="font-size: 8px; color: #333; text-align: center; margin-top: 5px; line-height: 1.4;">Click slot A then slot B to shift/swap items anywhere!</p>
+            <p style="font-size: 11px; color: #333; text-align: center; margin-top: 5px;">Click slot A then slot B to shift/swap items anywhere!</p>
         </div>
 
         <!-- HUD -->
@@ -236,7 +234,7 @@
         <!-- Start Overlay -->
         <div id="blocker">
             <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:12px; font-size: 15px; line-height: 1.4;">DONUT SMP CRYSTAL PVP</h1>
+                <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
                 
                 <div style="background: #111; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #333;">
                     <div class="option-group">
@@ -259,7 +257,7 @@
                     </div>
                 </div>
 
-                <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 10px;">Choose Mode to Play:</p>
+                <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
                 
                 <button class="mode-btn" id="btn-mode-ai">1. PLAY VS UPGRADED STEVE AI BOT</button>
                 <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY ON SINGLE DEVICE (2P DUEL)</button>
@@ -296,6 +294,7 @@
         let textTimeout = null;
         let isInventoryOpen = false;
 
+        // Inventory data arrays (Hotbar: 9 slots, Main Inventory: 27 slots with a balanced mix)
         let hotbarData = [
             { icon: '🗡', type: 'sword', count: '' },
             { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
@@ -320,6 +319,7 @@
             { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 }, { icon: '🗿', type: 'totem', count: 64 }, { icon: '🚀', type: 'firework', count: 64 }
         ];
 
+        // Drag and drop tracking state
         let draggedItem = null;
 
         let counts = { 
@@ -562,7 +562,9 @@
             }
         }
 
+        // Inventory Slot Drag & Drop / Swapping Logic
         function updateInventoryUI() {
+            // Update Hotbar UI
             for (let i = 0; i < 9; i++) {
                 const item = hotbarData[i];
                 const slotEl = document.getElementById(`slot-${i + 1}`);
@@ -579,6 +581,7 @@
                 }
             }
 
+            // Update Full Inventory Screen UI
             const container = document.getElementById('inv-grid-container');
             container.innerHTML = '';
 
@@ -604,12 +607,14 @@
             const clickedItem = targetCollection[index];
 
             if (!draggedItem) {
-                if (!clickedItem) return;
+                if (!clickedItem) return; // Empty slot clicked
                 draggedItem = { container: containerName, index: index, item: clickedItem };
                 showActionText("Picked up item. Click destination slot!");
                 playSound('eat');
             } else {
+                // Swap or place into destination slot
                 targetCollection[index] = draggedItem.item;
+                
                 const origCollection = draggedItem.container === 'hotbar' ? hotbarData : inventoryData;
                 origCollection[draggedItem.index] = clickedItem;
 
@@ -619,7 +624,7 @@
             }
 
             updateInventoryUI();
-            selectSlot(currentSlot);
+            selectSlot(currentSlot); // refresh active held item
         }
 
         function toggleInventory() {
@@ -1265,24 +1270,21 @@
             coreMesh.position.y = 0.65;
             crystalGroup.add(coreMesh);
 
-            const outerCrystalGroup = new THREE.Group();
-            outerCrystalGroup.position.y = 0.85; // Base position right on top of obsidian/fire block
-
             const crystalGeo = new THREE.BoxGeometry(0.65, 0.65, 0.65);
             const crystalMat = new THREE.MeshPhongMaterial({
                 color: 0xda70d6, emissive: 0x8a2be2, specular: 0xffffff, shininess: 100, transparent: true, opacity: 0.85
             });
             const outerCrystal = new THREE.Mesh(crystalGeo, crystalMat);
+            outerCrystal.position.y = 0.85;
             
             const wireframe = new THREE.LineSegments(
                 new THREE.EdgesGeometry(crystalGeo),
                 new THREE.LineBasicMaterial({ color: 0xffffff, linewidth: 2 })
             );
             outerCrystal.add(wireframe);
-            outerCrystalGroup.add(outerCrystal);
-            crystalGroup.add(outerCrystalGroup);
+            crystalGroup.add(outerCrystal);
 
-            crystalGroup.userData = { outerCrystal: outerCrystalGroup, floatOffset: Math.random() * Math.PI * 2 };
+            crystalGroup.userData = { outerCrystal: outerCrystal, floatOffset: Math.random() * Math.PI * 2 };
             return crystalGroup;
         }
 
@@ -1645,8 +1647,7 @@
             playSound('place');
 
             const crystal = createEndCrystalMesh();
-            // Align base precisely on top of the block surface (block surface is at y + 0.5)
-            crystal.position.set(x, y + 0.5, z);
+            crystal.position.set(x, y, z);
             scene.add(crystal);
             endCrystals.push(crystal);
         }
@@ -1727,41 +1728,22 @@
                 const p = new THREE.Mesh(pGeo, pMat);
                 p.position.copy(pos);
                 scene.add(p);
-                particleSystems.push({
-                    mesh: p,
-                    vel: new THREE.Vector3((Math.random() - 0.5) * 8, Math.random() * 8, (Math.random() - 0.5) * 8),
-                    life: 0.6
-                });
+
+                const v = new THREE.Vector3(
+                    (Math.random() - 0.5) * 10,
+                    Math.random() * 10,
+                    (Math.random() - 0.5) * 10
+                );
+                particleSystems.push({ mesh: p, vel: v, life: 0.6 });
             }
         }
 
-        function showActionText(txt) {
+        function showActionText(text) {
             const el = document.getElementById('action-text');
-            el.innerText = txt;
+            el.innerText = text;
             el.style.opacity = '1';
-            if (textTimeout) clearTimeout(textTimeout);
+            clearTimeout(textTimeout);
             textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
-        }
-
-        function checkCollision(pos) {
-            const playerRadius = 0.35;
-            for (let i = 0; i < solidColliders.length; i++) {
-                const box = solidColliders[i];
-                const bPos = box.position;
-                const scale = box.scale;
-
-                const minX = bPos.x - scale.x / 2 - playerRadius;
-                const maxX = bPos.x + scale.x / 2 + playerRadius;
-                const minZ = bPos.z - scale.z / 2 - playerRadius;
-                const maxZ = bPos.z + scale.z / 2 + playerRadius;
-                const minY = bPos.y - scale.y / 2;
-                const maxY = bPos.y + scale.y / 2 + PLAYER_EYE_HEIGHT;
-
-                if (pos.x >= minX && pos.x <= maxX && pos.z >= minZ && pos.z <= maxZ && pos.y >= minY && pos.y <= maxY) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         function animate() {
@@ -1771,120 +1753,138 @@
             const delta = (time - prevTime) / 1000;
             prevTime = time;
 
-            // Animate End Crystals floating smoothly inside their local group
-            endCrystals.forEach(crystal => {
-                const outer = crystal.userData.outerCrystal;
-                const offset = crystal.userData.floatOffset;
-                outer.position.y = 0.85 + Math.sin(time * 0.004 + offset) * 0.15;
-                outer.rotation.y += delta * 1.5;
-            });
-
             if (controls.isLocked || isMobile) {
                 velocity.x -= velocity.x * 10.0 * delta;
                 velocity.z -= velocity.z * 10.0 * delta;
 
                 if (!isGliding) {
-                    velocity.y -= 30.0 * delta; // Gravity
+                    velocity.y -= 28.0 * delta;
                 } else {
-                    velocity.y -= 5.0 * delta; // Gliding gravity
-                    velocity.y = Math.max(velocity.y, -4.0);
+                    velocity.y -= 5.0 * delta;
+                    velocity.z += 10.0 * delta;
                 }
 
                 const direction = new THREE.Vector3();
-                if (moveForward) direction.z += 1;
-                if (moveBackward) direction.z -= 1;
-                if (moveLeft) direction.x += 1;
-                if (moveRight) direction.x -= 1;
+                camera.getWorldDirection(direction);
+                direction.y = 0;
                 direction.normalize();
 
-                const speed = isGliding ? 28.0 : 12.0;
-                if (moveForward || moveBackward) velocity.z -= direction.z * speed * delta;
-                if (moveLeft || moveRight) velocity.x -= direction.x * speed * delta;
+                const sideDirection = new THREE.Vector3(-direction.z, 0, direction.x);
 
-                const pObj = controls.getObject();
-                
-                const oldX = pObj.position.x;
-                const oldZ = pObj.position.z;
+                let moveSpeed = isGliding ? 25.0 : 12.0;
+                if (moveForward) velocity.add(direction.clone().multiplyScalar(moveSpeed * delta * 10));
+                if (moveBackward) velocity.add(direction.clone().multiplyScalar(-moveSpeed * delta * 10));
+                if (moveLeft) velocity.add(sideDirection.clone().multiplyScalar(moveSpeed * delta * 10));
+                if (moveRight) velocity.add(sideDirection.clone().multiplyScalar(-moveSpeed * delta * 10));
 
-                pObj.translateX(-velocity.x * delta);
-                if (checkCollision(pObj.position)) {
-                    pObj.position.x = oldX;
-                    velocity.x = 0;
+                const camObj = controls.getObject();
+                const oldPos = camObj.position.clone();
+
+                camObj.position.x += velocity.x * delta;
+                camObj.position.z += velocity.z * delta;
+
+                const playerRadius = 0.4;
+                const distFromCenter = Math.sqrt(camObj.position.x * camObj.position.x + camObj.position.z * camObj.position.z);
+                const arenaRadius = 35;
+
+                const isInVoid = distFromCenter > arenaRadius;
+
+                if (!isInVoid) {
+                    for (let i = 0; i < solidColliders.length; i++) {
+                        const box = solidColliders[i];
+                        const boxPos = box.position;
+                        const boxScale = box.scale;
+
+                        const minX = boxPos.x - boxScale.x / 2 - playerRadius;
+                        const maxX = boxPos.x + boxScale.x / 2 + playerRadius;
+                        const minZ = boxPos.z - boxScale.z / 2 - playerRadius;
+                        const maxZ = boxPos.z + boxScale.z / 2 + playerRadius;
+                        const minY = boxPos.y - boxScale.y / 2 - PLAYER_EYE_HEIGHT;
+                        const maxY = boxPos.y + boxScale.y / 2 + PLAYER_EYE_HEIGHT;
+
+                        if (camObj.position.x > minX && camObj.position.x < maxX &&
+                            camObj.position.z > minZ && camObj.position.z < maxZ &&
+                            camObj.position.y > minY && camObj.position.y < maxY) {
+                            camObj.position.x = oldPos.x;
+                            camObj.position.z = oldPos.z;
+                            velocity.x = 0;
+                            velocity.z = 0;
+                            break;
+                        }
+                    }
                 }
 
-                pObj.translateZ(-velocity.z * delta);
-                if (checkCollision(pObj.position)) {
-                    pObj.position.z = oldZ;
-                    velocity.z = 0;
-                }
+                camObj.position.y += velocity.y * delta;
 
-                pObj.position.y += velocity.y * delta;
+                const floorLimit = isInVoid ? -50.0 : 0.5 + PLAYER_EYE_HEIGHT;
 
-                const groundLevel = 0.5 + PLAYER_EYE_HEIGHT;
-                if (pObj.position.y < groundLevel) {
-                    velocity.y = 0;
-                    pObj.position.y = groundLevel;
-                    canJump = true;
-                    isGliding = false;
-                }
-
-                const distFromCenter = Math.sqrt(pObj.position.x * pObj.position.x + pObj.position.z * pObj.position.z);
-                if (distFromCenter > 34) {
-                    const angle = Math.atan2(pObj.position.z, pObj.position.x);
-                    pObj.position.x = Math.cos(angle) * 34;
-                    pObj.position.z = Math.sin(angle) * 34;
+                if (camObj.position.y <= floorLimit) {
+                    if (isInVoid) {
+                        showActionText("FALLEN INTO THE VOID!");
+                        takeDamage(maxHealth);
+                        camObj.position.set(0, 15, 0);
+                        velocity.set(0, 0, 0);
+                        isGliding = false;
+                    } else {
+                        camObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
+                        velocity.y = 0;
+                        canJump = true;
+                        isGliding = false;
+                    }
                 }
 
                 broadcastPlayerPos();
             }
 
-            // Update AI Steve Bot
-            if (aiSteveMesh) updateAISteveLogic(delta);
+            endCrystals.forEach(c => {
+                c.userData.floatOffset += delta * 3;
+                c.position.y += Math.sin(c.userData.floatOffset) * 0.003;
+                if (c.userData.outerCrystal) {
+                    c.userData.outerCrystal.rotation.y += delta;
+                }
+            });
 
-            // Update Arrows
             for (let i = activeArrows.length - 1; i >= 0; i--) {
                 const arr = activeArrows[i];
-                arr.mesh.position.addScaledVector(arr.dir, delta);
+                arr.mesh.position.add(arr.dir.clone().multiplyScalar(delta));
                 arr.age += delta;
 
                 if (arr.age > 3.0) {
                     scene.remove(arr.mesh);
                     activeArrows.splice(i, 1);
-                } else if (arr.isFromBot && arr.mesh.position.distanceTo(camera.position) < 1.5) {
-                    takeDamage(3);
-                    scene.remove(arr.mesh);
-                    activeArrows.splice(i, 1);
-                    showActionText("Hit by AI Steve Crossbow!");
                 }
             }
 
-            // Update Ender Pearls
             for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
-                const p = activeEnderPearls[i];
-                p.velocity.y -= 25.0 * delta;
-                p.mesh.position.addScaledVector(p.velocity, delta);
-                p.age += delta;
+                const pearl = activeEnderPearls[i];
+                pearl.mesh.position.add(pearl.velocity.clone().multiplyScalar(delta));
+                pearl.velocity.y -= 20.0 * delta;
+                pearl.age += delta;
 
-                if (p.mesh.position.y <= 0.5 || p.age > 4.0) {
-                    controls.getObject().position.copy(p.mesh.position);
-                    controls.getObject().position.y += PLAYER_EYE_HEIGHT;
-                    playSound('explode');
-                    spawnParticleExplosion(p.mesh.position);
-                    scene.remove(p.mesh);
+                if (pearl.mesh.position.y <= 0.5 || pearl.age > 4.0) {
+                    controls.getObject().position.copy(pearl.mesh.position).add(new THREE.Vector3(0, PLAYER_EYE_HEIGHT, 0));
+                    scene.remove(pearl.mesh);
                     activeEnderPearls.splice(i, 1);
+                    playSound('explode');
+                    spawnParticleExplosion(controls.getObject().position);
                     showActionText("Ender Pearl Teleport!");
                 }
             }
 
-            // Update Particle Systems
             for (let i = particleSystems.length - 1; i >= 0; i--) {
-                const ps = particleSystems[i];
-                ps.mesh.position.addScaledVector(ps.vel, delta);
-                ps.life -= delta;
-                if (ps.life <= 0) {
-                    scene.remove(ps.mesh);
+                const p = particleSystems[i];
+                p.mesh.position.add(p.vel.clone().multiplyScalar(delta));
+                p.life -= delta;
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
                     particleSystems.splice(i, 1);
                 }
+            }
+
+            if (aiSteveMesh) updateAISteveLogic(delta);
+            if (broPlayerMesh && broPlayerMesh.position.y > 0.5) {
+                broPlayerMesh.position.y -= 9.8 * delta;
+                if (broPlayerMesh.position.y < 0.5) broPlayerMesh.position.y = 0.5;
             }
 
             renderer.render(scene, camera);
