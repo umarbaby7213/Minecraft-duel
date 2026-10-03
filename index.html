@@ -136,7 +136,7 @@
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
-        <div id="action-text">AI Steve Armed with Crossbow, Elytra & Fireworks!</div>
+        <div id="action-text">Solid Arena Walls & Void Collision Enabled!</div>
 
         <!-- Touch Joysticks & Buttons -->
         <div id="joystick-zone"><div id="joystick-knob"></div></div>
@@ -204,7 +204,6 @@
             <div id="instructions">
                 <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
                 
-                <!-- Game Settings Options -->
                 <div style="background: #111; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #333;">
                     <div class="option-group">
                         <label>BOT DIFFICULTY (FOR VS AI BOT)</label>
@@ -237,10 +236,6 @@
                 <div class="mp-btn-container">
                     <button class="mp-btn" id="btn-join-mp" style="background:#0077ff; width:100%;">JOIN ROOM</button>
                 </div>
-
-                <div style="text-align: left; background: #111; padding: 12px; margin-top:10px; border-radius: 5px; font-size: 11px; line-height: 1.4;">
-                    <p><b>Multiplayer Tip:</b> Enter the same Room Code on both devices and click <b>JOIN ROOM</b> to connect!</p>
-                </div>
             </div>
         </div>
     </div>
@@ -252,30 +247,22 @@
         const velocity = new THREE.Vector3();
         let prevTime = performance.now();
 
-        // Settings State
         let botDifficulty = 'medium';
-
-        // Mobile Controls Variables
         let isMobile = false;
         let touchLookID = null, touchMoveID = null;
         let touchLookLastX = 0, touchLookLastY = 0;
         let joystickCenter = { x: 0, y: 0 };
         let cameraEuler = new THREE.Euler(0, 0, 0, 'YXZ');
 
-        // Inventory & Game State
         let currentSlot = 1; 
         let playerHealth = 10;
         const maxHealth = 10;
         let textTimeout = null;
         let isInventoryOpen = false;
 
-        // Player Item Counts
         let counts = { gapple: 64, crystal: 64, obsidian: 64, totem: 64, arrow: 64, firework: 64, mace: 64, enderpearl: 64 };
-
-        // Elytra State
         let isGliding = false;
 
-        // Game Mode & Multiplayer
         let gameMode = 'none';
         let peer, peerConn;
         let remotePlayerMesh = null;
@@ -284,7 +271,6 @@
         let remotePlayerTotems = 64;
         let remotePlayerHealthBarMesh = null;
         
-        // AI Steve State (Upgraded)
         let aiSteveMesh = null, aiSteveTimer = 0, aiSteveFireworkTimer = 0, aiSteveCrossbowTimer = 0;
         let aiSteveHealth = 10;
         let aiSteveTotems = 64;
@@ -292,18 +278,16 @@
         let aiSteveVerticalVel = 0;
         let aiSteveIsSmashing = false;
 
-        // Held Item Meshes
         let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh;
 
-        // Active Projectiles & Systems
         const activeArrows = [];
         const activeEnderPearls = [];
         const placeableObjects = [];
+        const solidColliders = []; // Thick solid walls & blocks collision array
         const endCrystals = [];
         const dummyTargets = [];
         const particleSystems = [];
 
-        // Audio Generator
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playSound(type) {
@@ -399,7 +383,6 @@
 
             controls = new THREE.PointerLockControls(camera, document.body);
 
-            // Settings Listeners
             document.getElementById('bot-difficulty-select').addEventListener('change', (e) => {
                 botDifficulty = e.target.value;
             });
@@ -409,7 +392,6 @@
                 camera.updateProjectionMatrix();
             });
 
-            // Mode Selection Handlers
             document.getElementById('btn-mode-ai').addEventListener('click', () => {
                 gameMode = 'ai';
                 startGame();
@@ -422,7 +404,6 @@
                 spawnBrotherPlayer();
             });
 
-            // MULTIPLAYER JOIN ROOM BUTTON WITH FIXED MATCHMAKING
             document.getElementById('btn-join-mp').addEventListener('click', () => {
                 const roomCode = document.getElementById('room-input').value.trim();
                 if (!roomCode || roomCode.length < 2) {
@@ -460,7 +441,6 @@
             }
         }
 
-        /* --- Full Inventory GUI System ('E' Key) --- */
         function populateFullInventoryGUI() {
             const container = document.getElementById('inv-grid-container');
             container.innerHTML = '';
@@ -502,7 +482,6 @@
             }
         }
 
-        /* --- Player Meshes --- */
         function createStevePlayerMesh(color = 0x00aaff, isBot = false) {
             const steveGroup = new THREE.Group();
             
@@ -751,7 +730,6 @@
             }
         }
 
-        /* --- FIXED PEERJS MULTIPLAYER HOST & JOIN MATCHMAKING --- */
         function initMultiplayer(roomCode) {
             const fullRoomID = "donut-smp-match-" + roomCode;
 
@@ -765,11 +743,9 @@
 
             showActionText("Connecting to Room Code: " + roomCode + "...");
 
-            // Try to connect as Client first to existing room
             peer = new Peer();
 
             peer.on('open', () => {
-                // Try connecting to Host
                 const conn = peer.connect(fullRoomID);
                 
                 conn.on('open', () => {
@@ -782,7 +758,6 @@
                     startHostingRoom(fullRoomID, roomCode);
                 });
 
-                // Fallback timeout if peer doesn't exist (become host)
                 setTimeout(() => {
                     if (!peerConn || !peerConn.open) {
                         peer.destroy();
@@ -853,6 +828,7 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
+        /* --- Thick Arena Walls & Solid Block Colliders --- */
         function buildColosseumArenaInstanced() {
             const boxGeo = new THREE.BoxGeometry(1, 1, 1);
             const radius = 35;
@@ -934,7 +910,7 @@
             stoneTransforms.push(...getRingTransforms(pillarRadius + 1, 20, 1));
             const roofTransforms = getRingTransforms(pillarRadius, 21, 1);
 
-            function createBatchMesh(geometry, material, transforms) {
+            function createBatchMesh(geometry, material, transforms, isSolidWall = false) {
                 if (transforms.length === 0) return;
                 const instanced = new THREE.InstancedMesh(geometry, material, transforms.length);
                 const mat = new THREE.Matrix4();
@@ -943,16 +919,23 @@
                     scaleVec.set(t.sx || 1, t.sy || 1, t.sz || 1);
                     mat.compose(new THREE.Vector3(t.x, t.y, t.z), new THREE.Quaternion(), scaleVec);
                     instanced.setMatrixAt(i, mat);
+
+                    if (isSolidWall) {
+                        const colliderBox = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ visible: false }));
+                        colliderBox.position.set(t.x, t.y, t.z);
+                        colliderBox.scale.copy(scaleVec);
+                        solidColliders.push(colliderBox);
+                    }
                 });
                 instanced.instanceMatrix.needsUpdate = true;
                 scene.add(instanced);
             }
 
-            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms);
-            createBatchMesh(boxGeo, stoneMat, stoneTransforms);
-            createBatchMesh(boxGeo, pillarMat, pillarTransforms);
-            createBatchMesh(boxGeo, leafMat, leafTransforms);
-            createBatchMesh(boxGeo, roofMat, roofTransforms);
+            createBatchMesh(boxGeo, darkStoneMat, darkStoneTransforms, true);
+            createBatchMesh(boxGeo, stoneMat, stoneTransforms, true);
+            createBatchMesh(boxGeo, pillarMat, pillarTransforms, true);
+            createBatchMesh(boxGeo, leafMat, leafTransforms, false);
+            createBatchMesh(boxGeo, roofMat, roofTransforms, true);
         }
 
         function spawnDummyTargets() {
@@ -1400,261 +1383,281 @@
         }
 
         function placeObsidianBlock(x, y, z) {
-            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
-            const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.2, metalness: 0.5 });
-            const obsMesh = new THREE.Mesh(obsGeo, obsMat);
-            obsMesh.position.set(x, y, z);
-            
-            scene.add(obsMesh);
-            placeableObjects.push(obsMesh);
-
             counts.obsidian--;
             document.getElementById('obsidian-count').innerText = counts.obsidian;
             playSound('place');
+
+            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
+            const obsMat = new THREE.MeshStandardMaterial({ color: 0x1a0d2b, roughness: 0.4 });
+            const mesh = new THREE.Mesh(obsGeo, obsMat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+
+            placeableObjects.push(mesh);
+            solidColliders.push(mesh); // Added to thick solid collision blocks
         }
 
         function placeEndCrystal(x, y, z) {
-            const crystalMesh = createEndCrystalMesh();
-            crystalMesh.position.set(x, y - 0.5, z);
-            
-            scene.add(crystalMesh);
-            endCrystals.push(crystalMesh);
-
             counts.crystal--;
             document.getElementById('crystal-count').innerText = counts.crystal;
             playSound('place');
+
+            const crystal = createEndCrystalMesh();
+            crystal.position.set(x, y, z);
+            scene.add(crystal);
+            endCrystals.push(crystal);
+        }
+
+        function detonateCrystal(crystalObj) {
+            playSound('explode');
+            spawnParticleExplosion(crystalObj.position);
+
+            const index = endCrystals.indexOf(crystalObj);
+            if (index > -1) endCrystals.splice(index, 1);
+            scene.remove(crystalObj);
+
+            const dist = camera.position.distanceTo(crystalObj.position);
+            if (dist < 6.0) {
+                const dmg = Math.round((6.0 - dist) * 1.5) + 3;
+                takeDamage(dmg);
+                showActionText(`BOOM! End Crystal Damage (-${dmg} HP)`);
+            }
         }
 
         function eatGoldenApple() {
             if (counts.gapple <= 0) return;
-            if (playerHealth < maxHealth) {
-                playerHealth = Math.min(maxHealth, playerHealth + 4);
-                updateHeartsUI();
-                counts.gapple--;
-                document.getElementById('gapple-count').innerText = counts.gapple;
-                playSound('eat');
-                showActionText("Ate Golden Apple! +4 Hearts");
-            } else {
-                showActionText("Health is already full!");
-            }
-        }
+            counts.gapple--;
+            document.getElementById('gapple-count').innerText = counts.gapple;
+            playSound('eat');
 
-        function detonateCrystal(crystalObj) {
-            const index = endCrystals.indexOf(crystalObj);
-            if (index > -1) endCrystals.splice(index, 1);
-
-            const explosionPos = crystalObj.position.clone();
-            scene.remove(crystalObj);
-            playSound('explode');
-
-            spawnParticleExplosion(explosionPos);
-
-            const flash = document.getElementById('flash-overlay');
-            flash.style.background = 'rgba(255, 255, 255, 0.6)';
-            setTimeout(() => { flash.style.background = 'rgba(255, 255, 255, 0)'; }, 60);
-
-            const playerDist = camera.position.distanceTo(explosionPos);
-            if (playerDist < 6.0) {
-                const damage = Math.round((1 - playerDist / 6.0) * 8);
-                takeDamage(damage);
-
-                const knockbackDir = camera.position.clone().sub(explosionPos).normalize();
-                velocity.x += knockbackDir.x * 12.0;
-                velocity.y += Math.max(3.0, knockbackDir.y * 10.0);
-                velocity.z += knockbackDir.z * 12.0;
-            }
-
-            if (aiSteveMesh) {
-                const botDist = aiSteveMesh.position.distanceTo(explosionPos);
-                if (botDist < 6.0) damageAISteve(Math.round((1 - botDist / 6.0) * 8));
-            }
-
-            if (remotePlayerMesh) {
-                const remoteDist = remotePlayerMesh.position.distanceTo(explosionPos);
-                if (remoteDist < 6.0) damageRemotePlayer(Math.round((1 - remoteDist / 6.0) * 8));
-            }
-        }
-
-        function spawnParticleExplosion(pos) {
-            const particleCount = 60;
-            const geometry = new THREE.BufferGeometry();
-            const positions = new Float32Array(particleCount * 3);
-            const velocities = [];
-
-            for (let i = 0; i < particleCount; i++) {
-                positions[i * 3] = pos.x;
-                positions[i * 3 + 1] = pos.y + 0.5;
-                positions[i * 3 + 2] = pos.z;
-
-                velocities.push(new THREE.Vector3(
-                    (Math.random() - 0.5) * 12,
-                    Math.random() * 8 + 2,
-                    (Math.random() - 0.5) * 12
-                ));
-            }
-
-            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-            const material = new THREE.PointsMaterial({ color: 0xff5500, size: 0.25, transparent: true, opacity: 1.0 });
-            const pSystem = new THREE.Points(geometry, material);
-            pSystem.userData = { velocities: velocities, age: 0 };
-
-            scene.add(pSystem);
-            particleSystems.push(pSystem);
+            playerHealth = Math.min(maxHealth, playerHealth + 4);
+            updateHeartsUI();
+            showActionText("Ate Golden Apple (+4 Health)");
         }
 
         function takeDamage(amount) {
             playerHealth -= amount;
+            updateHeartsUI();
+
+            const flash = document.getElementById('flash-overlay');
+            flash.style.background = 'rgba(255, 0, 0, 0.4)';
+            setTimeout(() => { flash.style.background = 'rgba(255, 0, 0, 0)'; }, 100);
+
             if (playerHealth <= 0) {
                 if (counts.totem > 0) {
-                    popTotem();
-                } else {
+                    counts.totem--;
+                    document.getElementById('totem-count').innerText = counts.totem;
                     playerHealth = maxHealth;
+                    updateHeartsUI();
+                    playSound('totem');
+
+                    const pop = document.getElementById('totem-pop-overlay');
+                    pop.classList.add('active');
+                    setTimeout(() => pop.classList.remove('active'), 500);
+                    showActionText("TOTEM OF UNDYING SAVED YOU!");
+                } else {
+                    showActionText("YOU DIED! Respawning...");
+                    playerHealth = maxHealth;
+                    counts.totem = 64;
+                    document.getElementById('totem-count').innerText = 64;
+                    updateHeartsUI();
                     controls.getObject().position.set(0, 3, 0);
-                    showActionText("You died! Respawned.");
                 }
             }
-            updateHeartsUI();
-        }
-
-        function popTotem() {
-            counts.totem--;
-            document.getElementById('totem-count').innerText = counts.totem;
-            playerHealth = 4;
-            playSound('totem');
-
-            const totemOverlay = document.getElementById('totem-pop-overlay');
-            totemOverlay.classList.add('active');
-            setTimeout(() => { totemOverlay.classList.remove('active'); }, 1000);
-
-            showActionText(`TOTEM POPPED! (${counts.totem} Left)`);
         }
 
         function updateHeartsUI() {
             const container = document.getElementById('hearts-container');
-            const hearts = container.querySelectorAll('.pixel-heart');
-            hearts.forEach((heart, idx) => {
-                if (idx < playerHealth) heart.classList.remove('empty');
-                else heart.classList.add('empty');
-            });
+            container.innerHTML = '';
+            for (let i = 0; i < maxHealth; i++) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'heart-wrapper';
+                const heart = document.createElement('div');
+                heart.className = 'pixel-heart';
+                if (i >= playerHealth) heart.classList.add('empty');
+                wrapper.appendChild(heart);
+                container.appendChild(wrapper);
+            }
         }
 
-        function showActionText(msg) {
+        function spawnParticleExplosion(pos) {
+            const pCount = 20;
+            const pGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+            const pMat = new THREE.MeshBasicMaterial({ color: 0xffaa00 });
+
+            for (let i = 0; i < pCount; i++) {
+                const p = new THREE.Mesh(pGeo, pMat);
+                p.position.copy(pos);
+                scene.add(p);
+
+                const v = new THREE.Vector3(
+                    (Math.random() - 0.5) * 10,
+                    Math.random() * 10,
+                    (Math.random() - 0.5) * 10
+                );
+                particleSystems.push({ mesh: p, vel: v, life: 0.6 });
+            }
+        }
+
+        function showActionText(text) {
             const el = document.getElementById('action-text');
-            el.innerText = msg;
-            el.style.opacity = 1;
-
-            if (textTimeout) clearTimeout(textTimeout);
-            textTimeout = setTimeout(() => { el.style.opacity = 0; }, 1800);
+            el.innerText = text;
+            el.style.opacity = '1';
+            clearTimeout(textTimeout);
+            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
         }
 
+        /* --- Main Animation Loop with Thick Solid & Void Collision Logic --- */
         function animate() {
             requestAnimationFrame(animate);
 
             const time = performance.now();
-            const delta = Math.min((time - prevTime) / 1000, 0.1); 
+            const delta = (time - prevTime) / 1000;
             prevTime = time;
 
-            if (remotePlayerHealthBarMesh) remotePlayerHealthBarMesh.lookAt(camera.position);
+            if (controls.isLocked || isMobile) {
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
 
-            if ((controls.isLocked || isMobile) && !isInventoryOpen) {
-                velocity.x -= velocity.x * (isGliding ? 2.0 : 10.0) * delta;
-                velocity.z -= velocity.z * (isGliding ? 2.0 : 10.0) * delta;
-                
-                if (isGliding) velocity.y -= 4.0 * delta;
-                else velocity.y -= 25.0 * delta;
-
-                const inputDir = new THREE.Vector3(
-                    Number(moveRight) - Number(moveLeft),
-                    0,
-                    Number(moveForward) - Number(moveBackward)
-                ).normalize();
-
-                if (moveForward || moveBackward) velocity.z -= inputDir.z * 80.0 * delta;
-                if (moveLeft || moveRight) velocity.x -= inputDir.x * 80.0 * delta;
-
-                controls.moveRight(-velocity.x * delta);
-                controls.moveForward(-velocity.z * delta);
-                controls.getObject().position.y += velocity.y * delta;
-
-                if (controls.getObject().position.y < 2.5) {
-                    velocity.y = 0;
-                    controls.getObject().position.y = 2.5;
-                    canJump = true;
-                    isGliding = false;
+                if (!isGliding) {
+                    velocity.y -= 28.0 * delta; // Gravity
+                } else {
+                    velocity.y -= 5.0 * delta; // Gliding gravity
+                    velocity.z += 10.0 * delta;
                 }
 
-                if (gameMode === 'mp') broadcastPlayerPos();
-                if (gameMode === 'ai') updateAISteveLogic(delta);
-            }
+                const direction = new THREE.Vector3();
+                camera.getWorldDirection(direction);
+                direction.y = 0;
+                direction.normalize();
 
-            for (let i = activeArrows.length - 1; i >= 0; i--) {
-                const arrow = activeArrows[i];
-                arrow.mesh.position.addScaledVector(arrow.dir, delta);
-                arrow.age += delta;
+                const sideDirection = new THREE.Vector3(-direction.z, 0, direction.x);
 
-                if (arrow.isFromBot) {
-                    if (camera.position.distanceTo(arrow.mesh.position) < 1.5) {
-                        takeDamage(botDifficulty === 'hard' ? 5 : 3);
-                        spawnParticleExplosion(arrow.mesh.position);
-                        scene.remove(arrow.mesh);
-                        activeArrows.splice(i, 1);
-                        continue;
+                let moveSpeed = isGliding ? 25.0 : 12.0;
+                if (moveForward) velocity.add(direction.clone().multiplyScalar(moveSpeed * delta * 10));
+                if (moveBackward) velocity.add(direction.clone().multiplyScalar(-moveSpeed * delta * 10));
+                if (moveLeft) velocity.add(sideDirection.clone().multiplyScalar(moveSpeed * delta * 10));
+                if (moveRight) velocity.add(sideDirection.clone().multiplyScalar(-moveSpeed * delta * 10));
+
+                const camObj = controls.getObject();
+                const oldPos = camObj.position.clone();
+
+                camObj.position.x += velocity.x * delta;
+                camObj.position.z += velocity.z * delta;
+
+                // --- Thick Wall & Placed Blocks Solid Collision vs Void Check ---
+                const playerRadius = 0.4;
+                const distFromCenter = Math.sqrt(camObj.position.x * camObj.position.x + camObj.position.z * camObj.position.z);
+                const arenaRadius = 35;
+
+                // Check if player is inside the void (outside arena radius)
+                const isInVoid = distFromCenter > arenaRadius;
+
+                // Solid collision against arena walls & placed blocks (only when NOT in the void)
+                if (!isInVoid) {
+                    for (let i = 0; i < solidColliders.length; i++) {
+                        const box = solidColliders[i];
+                        const boxPos = box.position;
+                        const boxScale = box.scale;
+
+                        const minX = boxPos.x - boxScale.x / 2 - playerRadius;
+                        const maxX = boxPos.x + boxScale.x / 2 + playerRadius;
+                        const minZ = boxPos.z - boxScale.z / 2 - playerRadius;
+                        const maxZ = boxPos.z + boxScale.z / 2 + playerRadius;
+                        const minY = boxPos.y - boxScale.y / 2 - 1.5;
+                        const maxY = boxPos.y + boxScale.y / 2 + 0.5;
+
+                        if (camObj.position.x > minX && camObj.position.x < maxX &&
+                            camObj.position.z > minZ && camObj.position.z < maxZ &&
+                            camObj.position.y > minY && camObj.position.y < maxY) {
+                            // Revert horizontal movement if colliding with solid walls/blocks
+                            camObj.position.x = oldPos.x;
+                            camObj.position.z = oldPos.z;
+                            velocity.x = 0;
+                            velocity.z = 0;
+                            break;
+                        }
                     }
                 }
 
-                if (arrow.age > 2.0 || arrow.mesh.position.y < 0.5) {
-                    spawnParticleExplosion(arrow.mesh.position);
-                    scene.remove(arrow.mesh);
+                // Vertical position & Void collision behavior
+                camObj.position.y += velocity.y * delta;
+
+                // If in void, collision with floor is false -> player falls into void!
+                const floorLimit = isInVoid ? -50.0 : 0.5;
+
+                if (camObj.position.y <= floorLimit) {
+                    if (isInVoid) {
+                        // Fallen into void
+                        showActionText("FALLEN INTO THE VOID!");
+                        takeDamage(maxHealth); // Instant death / totem pop
+                        camObj.position.set(0, 15, 0); // Respawn high up
+                        velocity.set(0, 0, 0);
+                        isGliding = false;
+                    } else {
+                        camObj.position.y = 0.5;
+                        velocity.y = 0;
+                        canJump = true;
+                        isGliding = false;
+                    }
+                }
+
+                broadcastPlayerPos();
+            }
+
+            // Update End Crystals floating animation
+            endCrystals.forEach(c => {
+                c.userData.floatOffset += delta * 3;
+                c.position.y += Math.sin(c.userData.floatOffset) * 0.003;
+                if (c.userData.outerCrystal) {
+                    c.userData.outerCrystal.rotation.y += delta;
+                }
+            });
+
+            // Update Arrows
+            for (let i = activeArrows.length - 1; i >= 0; i--) {
+                const arr = activeArrows[i];
+                arr.mesh.position.add(arr.dir.clone().multiplyScalar(delta));
+                arr.age += delta;
+
+                if (arr.age > 3.0) {
+                    scene.remove(arr.mesh);
                     activeArrows.splice(i, 1);
                 }
             }
 
+            // Update Ender Pearls
             for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
                 const pearl = activeEnderPearls[i];
-                pearl.mesh.position.addScaledVector(pearl.velocity, delta);
+                pearl.mesh.position.add(pearl.velocity.clone().multiplyScalar(delta));
                 pearl.velocity.y -= 20.0 * delta;
                 pearl.age += delta;
 
-                if (pearl.mesh.position.y <= 0.6 || pearl.age > 3.0) {
-                    controls.getObject().position.copy(pearl.mesh.position);
-                    controls.getObject().position.y = 2.5;
-                    spawnParticleExplosion(pearl.mesh.position);
-                    playSound('explode');
+                if (pearl.mesh.position.y <= 0.5 || pearl.age > 4.0) {
+                    controls.getObject().position.copy(pearl.mesh.position).add(new THREE.Vector3(0, 1, 0));
                     scene.remove(pearl.mesh);
                     activeEnderPearls.splice(i, 1);
-                    showActionText("Teleported via Ender Pearl!");
+                    playSound('explode');
+                    spawnParticleExplosion(controls.getObject().position);
+                    showActionText("Ender Pearl Teleport!");
                 }
             }
 
-            endCrystals.forEach(c => {
-                if (c.userData.outerCrystal) {
-                    c.userData.outerCrystal.rotation.y += delta * 1.5;
-                    c.userData.outerCrystal.rotation.x += delta * 0.8;
-                    c.userData.outerCrystal.position.y = 0.85 + Math.sin(time * 0.003 + c.userData.floatOffset) * 0.08;
-                }
-            });
-
+            // Update Particles
             for (let i = particleSystems.length - 1; i >= 0; i--) {
-                const ps = particleSystems[i];
-                ps.userData.age += delta;
-
-                const posAttr = ps.geometry.attributes.position;
-                for (let j = 0; j < ps.userData.velocities.length; j++) {
-                    const vel = ps.userData.velocities[j];
-                    posAttr.setX(j, posAttr.getX(j) + vel.x * delta);
-                    posAttr.setY(j, posAttr.getY(j) + vel.y * delta);
-                    posAttr.setZ(j, posAttr.getZ(j) + vel.z * delta);
-                    vel.y -= 15.0 * delta;
-                }
-                posAttr.needsUpdate = true;
-                ps.material.opacity = Math.max(0, 1.0 - ps.userData.age / 0.8);
-
-                if (ps.userData.age >= 0.8) {
-                    scene.remove(ps);
-                    ps.geometry.dispose();
-                    ps.material.dispose();
+                const p = particleSystems[i];
+                p.mesh.position.add(p.vel.clone().multiplyScalar(delta));
+                p.life -= delta;
+                if (p.life <= 0) {
+                    scene.remove(p.mesh);
                     particleSystems.splice(i, 1);
                 }
+            }
+
+            if (aiSteveMesh) updateAISteveLogic(delta);
+            if (broPlayerMesh && broPlayerMesh.position.y > 0.5) {
+                broPlayerMesh.position.y -= 9.8 * delta;
+                if (broPlayerMesh.position.y < 0.5) broPlayerMesh.position.y = 0.5;
             }
 
             renderer.render(scene, camera);
