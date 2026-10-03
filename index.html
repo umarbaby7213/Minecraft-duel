@@ -179,7 +179,7 @@
             <div class="mobile-btn" id="btn-place" style="border-color:#55ff55;">PLACE</div>
         </div>
 
-        <!-- Full Inventory GUI Screen -->
+        <!-- Full Inventory GUI Screen (Opened with 'E') -->
         <div id="inventory-screen">
             <h3>PLAYER INVENTORY (Press E to Close)[cite: 3]</h3>
             <div class="inv-grid" id="inv-grid-container"></div>
@@ -294,9 +294,9 @@
         let textTimeout = null;
         let isInventoryOpen = false;
 
-        // Inventory data arrays (Hotbar: 9 slots, Main Inventory: 27 slots)
+        // Inventory data arrays (Hotbar: 9 slots, Main Inventory: 27 slots with a balanced mix)
         let hotbarData = [
-            { icon: '🗡️️', type: 'sword', count: '' },
+            { icon: '🗡', type: 'sword', count: '' },
             { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
             { icon: '🔮', type: 'crystal', count: 64 },
             { icon: '⬛', type: 'obsidian', count: 64 },
@@ -307,10 +307,17 @@
             { icon: '🟣', type: 'enderpearl', count: 64 }
         ];
 
-        let inventoryData = [];
-        for (let i = 0; i < 27; i++) {
-            inventoryData.push({ icon: '🔮', type: 'crystal', count: 64 });
-        }
+        let inventoryData = [
+            { icon: '🔮', type: 'crystal', count: 64 }, { icon: '🔮', type: 'crystal', count: 64 }, { icon: '🔮', type: 'crystal', count: 64 },
+            { icon: '⬛', type: 'obsidian', count: 64 }, { icon: '⬛', type: 'obsidian', count: 64 }, { icon: '⬛', type: 'obsidian', count: 64 },
+            { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 }, { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 }, { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
+            { icon: '🗿', type: 'totem', count: 64 }, { icon: '🗿', type: 'totem', count: 64 }, { icon: '🗿', type: 'totem', count: 64 },
+            { icon: '🚀', type: 'firework', count: 64 }, { icon: '🚀', type: 'firework', count: 64 }, { icon: '🚀', type: 'firework', count: 64 },
+            { icon: '🟣', type: 'enderpearl', count: 64 }, { icon: '🟣', type: 'enderpearl', count: 64 }, { icon: '🟣', type: 'enderpearl', count: 64 },
+            { icon: '🏹', type: 'arrow', count: 64 }, { icon: '🏹', type: 'arrow', count: 64 }, { icon: '🏹', type: 'arrow', count: 64 },
+            { icon: '🔨', type: 'mace', count: 64 }, { icon: '🔮', type: 'crystal', count: 64 }, { icon: '⬛', type: 'obsidian', count: 64 },
+            { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 }, { icon: '🗿', type: 'totem', count: 64 }, { icon: '🚀', type: 'firework', count: 64 }
+        ];
 
         // Drag and drop tracking state
         let draggedItem = null;
