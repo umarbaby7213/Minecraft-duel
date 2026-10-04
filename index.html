@@ -510,7 +510,7 @@
         let aiSteveIsSmashing = false;
         let aiSteveWalkAnimTimer = 0;
 
-        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh;
+        let swordMesh, heldTotemMesh, crossbowMesh, maceMesh, enderpearlMesh, fireworkMesh;
 
         const activeArrows = [];
         const activeEnderPearls = [];
@@ -825,6 +825,13 @@
         }
 
         function handleSlotClick(containerName, index) {
+            // Inventory closed: tapping a hotbar slot just selects it
+            if (containerName === 'hotbar' && !isInventoryOpen) {
+                selectSlot(index + 1);
+                playSound('place');
+                return;
+            }
+
             const targetCollection = containerName === 'hotbar' ? hotbarData : inventoryData;
             const clickedItem = targetCollection[index];
 
@@ -1475,6 +1482,23 @@
             enderpearlMesh.position.set(0.35, -0.35, -0.5);
             enderpearlMesh.visible = false;
             camera.add(enderpearlMesh);
+
+            fireworkMesh = new THREE.Group();
+            const fwBody = new THREE.Mesh(
+                new THREE.CylinderGeometry(0.04, 0.04, 0.45, 8),
+                new THREE.MeshStandardMaterial({ color: 0xdd2222 })
+            );
+            fireworkMesh.add(fwBody);
+            const fwTip = new THREE.Mesh(
+                new THREE.ConeGeometry(0.045, 0.12, 8),
+                new THREE.MeshStandardMaterial({ color: 0xffdd00 })
+            );
+            fwTip.position.y = 0.28;
+            fireworkMesh.add(fwTip);
+            fireworkMesh.position.set(0.35, -0.3, -0.5);
+            fireworkMesh.rotation.set(-0.3, 0, -0.2);
+            fireworkMesh.visible = false;
+            camera.add(fireworkMesh);
         }
 
         function createEndCrystalMesh() {
@@ -1635,10 +1659,29 @@
                 handleLeftClick();
             });
 
-            document.getElementById('btn-place').addEventListener('touchstart', (e) => {
+            let placeHoldTimer = null;
+            const placeBtn = document.getElementById('btn-place');
+
+            function stopPlaceHold() {
+                if (placeHoldTimer) { clearInterval(placeHoldTimer); placeHoldTimer = null; }
+            }
+
+            placeBtn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 handleRightClick();
-            });
+
+                const item = hotbarData[currentSlot - 1];
+                const type = item ? item.type : '';
+                // Hold to keep using fireworks / golden apples
+                if (type === 'firework' || type === 'gapple') {
+                    stopPlaceHold();
+                    placeHoldTimer = setInterval(handleRightClick, type === 'firework' ? 450 : 900);
+                }
+            }, { passive: false });
+
+            placeBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopPlaceHold(); }, { passive: false });
+            placeBtn.addEventListener('touchcancel', stopPlaceHold);
         }
 
         function selectSlot(slotNum) {
@@ -1659,6 +1702,7 @@
             crossbowMesh.visible = (itemType === 'arrow');
             maceMesh.visible = (itemType === 'mace');
             enderpearlMesh.visible = (itemType === 'enderpearl');
+            fireworkMesh.visible = (itemType === 'firework');
         }
 
         function setupMouseInteraction() {
