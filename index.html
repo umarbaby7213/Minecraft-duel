@@ -1580,11 +1580,7 @@
                             velocity.y += 11.0; 
                             canJump = false; 
                         } else {
-                            const activeItem = hotbarData[currentSlot - 1];
-                            if (activeItem && activeItem.type === 'firework' && !isGliding && controls.getObject().position.y > 3.0) {
-                                isGliding = true;
-                                showActionText("Elytra Gliding Activated!");
-                            }
+                            startGlide();
                         }
                         break;
                     case 'KeyE': toggleInventory(); break;
@@ -1615,16 +1611,22 @@
             });
         }
 
+        let glideSpeed = 14;
+        function startGlide() {
+            if (isGliding) return;
+            if (controls.getObject().position.y < 0.5 + PLAYER_EYE_HEIGHT + 0.8) return;
+            isGliding = true;
+            glideSpeed = Math.max(14, Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z));
+            showActionText("Elytra opened! Use fireworks to boost");
+            playSound('place');
+        }
+
         function mobileJump() {
             if (canJump) { 
                 velocity.y += 11.0; 
                 canJump = false; 
             } else {
-                const activeItem = hotbarData[currentSlot - 1];
-                if (activeItem && activeItem.type === 'firework' && !isGliding) {
-                    isGliding = true;
-                    showActionText("Elytra Gliding!");
-                }
+                startGlide();
             }
         }
 
@@ -1837,21 +1839,17 @@
         }
 
         function useFireworkBoost() {
+            if (!isGliding) {
+                showActionText("Jump, then jump again in the air to open Elytra first!");
+                return;
+            }
             if (counts.firework <= 0) return;
             counts.firework--;
             playSound('firework');
 
-            const dir = new THREE.Vector3();
-            camera.getWorldDirection(dir);
-
-            velocity.x += dir.x * 40.0;
-            velocity.y += Math.max(dir.y, 0) * 20.0 + 14.0;
-            velocity.z += dir.z * 40.0;
-            canJump = false;
-
-            isGliding = true;
-            spawnParticleExplosion(camera.position);
-            showActionText("FIREWORK BOOST LAUNCH!");
+            glideSpeed = Math.min(60, glideSpeed + 22);
+            spawnParticleExplosion(camera.position.clone().add(new THREE.Vector3(0, -0.6, 0)));
+            showActionText("Firework boost! Speed " + Math.round(glideSpeed));
         }
 
         function handleLeftClick() {
@@ -2062,14 +2060,21 @@
             prevTime = time;
 
             if (controls.isLocked || isMobile) {
-                velocity.x -= velocity.x * 10.0 * delta;
-                velocity.z -= velocity.z * 10.0 * delta;
-
                 if (!isGliding) {
+                    velocity.x -= velocity.x * 10.0 * delta;
+                    velocity.z -= velocity.z * 10.0 * delta;
                     velocity.y -= 28.0 * delta;
                 } else {
-                    velocity.y -= 5.0 * delta;
-                    velocity.z += 10.0 * delta;
+                    // Elytra: fly toward where you look; diving builds speed, climbing bleeds it
+                    const look = new THREE.Vector3();
+                    camera.getWorldDirection(look);
+                    if (look.y < 0) glideSpeed = Math.min(40, glideSpeed + (-look.y) * 18.0 * delta);
+                    else glideSpeed = Math.max(10, glideSpeed - look.y * 14.0 * delta);
+                    if (glideSpeed > 18) glideSpeed = Math.max(18, glideSpeed - 3.0 * delta);
+
+                    const target = look.multiplyScalar(glideSpeed);
+                    target.y -= 1.5;
+                    velocity.lerp(target, Math.min(1, 3.0 * delta));
                 }
 
                 const direction = new THREE.Vector3();
@@ -2079,11 +2084,11 @@
 
                 const sideDirection = new THREE.Vector3(-direction.z, 0, direction.x);
 
-                let moveSpeed = isGliding ? 25.0 : 12.0;
-                if (moveForward) velocity.add(direction.clone().multiplyScalar(moveSpeed * delta * 10));
-                if (moveBackward) velocity.add(direction.clone().multiplyScalar(-moveSpeed * delta * 10));
-                if (moveLeft) velocity.add(sideDirection.clone().multiplyScalar(moveSpeed * delta * 10));
-                if (moveRight) velocity.add(sideDirection.clone().multiplyScalar(-moveSpeed * delta * 10));
+                let moveSpeed = 12.0; const canWalk = !isGliding;
+                if (canWalk && moveForward) velocity.add(direction.clone().multiplyScalar(moveSpeed * delta * 10));
+                if (canWalk && moveBackward) velocity.add(direction.clone().multiplyScalar(-moveSpeed * delta * 10));
+                if (canWalk && moveLeft) velocity.add(sideDirection.clone().multiplyScalar(moveSpeed * delta * 10));
+                if (canWalk && moveRight) velocity.add(sideDirection.clone().multiplyScalar(-moveSpeed * delta * 10));
 
                 const camObj = controls.getObject();
                 const oldPos = camObj.position.clone();
