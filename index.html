@@ -4,22 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Donut SMP - End Crystal PvP</title>
+    <!-- Import Minecraft pixel font -->
+    <link href="https://fonts.cdnfonts.com/css/minecraft-4" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
-        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Minecraft', 'Courier New', Courier, monospace; }
         #game-container { width: 100vw; height: 100vh; position: relative; }
         
-        /* Refill Button (Top Left) */
-        #refill-btn {
-            position: absolute; top: 15px; left: 15px; z-index: 25; pointer-events: auto;
-            background: #22c55e; color: #fff; border: 3px solid #15803d; border-radius: 6px;
-            padding: 10px 18px; font-weight: bold; font-size: 14px; font-family: inherit;
-            cursor: pointer; box-shadow: 0 4px #166534, 0 0 15px rgba(34, 197, 94, 0.4);
-            transition: transform 0.1s;
-        }
-        #refill-btn:hover { background: #16a34a; }
-        #refill-btn:active { transform: translateY(2px); box-shadow: 0 2px #166534; }
-
         /* Crosshair */
         #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
         #crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(255, 255, 255, 0.9); box-shadow: 0 0 2px #000; }
@@ -134,31 +125,73 @@
         .inv-slot.selected-drag { border-color: #ffaa00; background: #d4a373; }
 
         /* Mobile Controls Overlays */
-        #joystick-zone { position: absolute; bottom: 20px; left: 20px; width: 120px; height: 120px; background: rgba(255, 255, 255, 0.1); border: 2px solid rgba(255, 255, 255, 0.3); border-radius: 50%; z-index: 6; display: none; }
-        #joystick-knob { position: absolute; top: 35px; left: 35px; width: 50px; height: 50px; background: rgba(255, 255, 255, 0.4); border-radius: 50%; }
+        #joystick-zone { position: absolute; bottom: 20px; left: 20px; display: none; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 4px; z-index: 6; padding: 6px; background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+        .dpad-btn { background: #8b8b8b; color: #222; border: 3px solid #3c3c3c; border-top-color: #c6c6c6; border-left-color: #c6c6c6; box-shadow: inset -3px -3px 0 #555; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; }
+        .dpad-btn:active { background: #b5b5b5; }
         
         #mobile-buttons { position: absolute; bottom: 20px; right: 20px; display: none; flex-direction: column; gap: 8px; z-index: 6; }
         .mobile-btn { width: 54px; height: 54px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 12px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
         .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         /* Action Text Overlay */
-        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; text-align: center; }
+        #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
-        /* Settings Options UI */
-        .option-group { display: flex; flex-direction: column; gap: 4px; text-align: left; margin-bottom: 8px; }
-        .option-group label { color: #aaa; font-size: 12px; font-weight: bold; }
-        .option-select, .option-input { width: 100%; padding: 8px; background: #222; color: #fff; border: 1px solid #ffaa00; border-radius: 4px; font-family: inherit; font-size: 13px; }
+        /* Minecraft Style Menu Blocker */
+        #blocker {
+            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), repeating-linear-gradient(45deg, #2b2b2b 0, #2b2b2b 10px, #222 10px, #222 20px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: #fff; z-index: 30; font-family: 'Minecraft', 'Courier New', Courier, monospace;
+        }
 
-        /* Start Screen Blocker */
-        #blocker { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; color: #fff; z-index: 30; }
-        #instructions { text-align: center; padding: 25px; background: rgba(20, 20, 20, 0.95); border: 3px solid #ff0055; box-shadow: 0 0 30px #ff0055; border-radius: 8px; max-width: 90%; width: 480px; max-height: 90vh; overflow-y: auto; }
-        .mode-btn { margin: 8px 0; padding: 12px; width: 100%; background: #ff0055; color: #fff; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .mode-btn:hover { background: #ff3377; }
-        #room-input { width: 100%; padding: 10px; margin: 8px 0; text-align: center; font-size: 18px; border-radius: 5px; border: 2px solid #ffaa00; background: #222; color: #fff; }
-        
-        /* Multiplayer Buttons Group */
-        .mp-btn-container { display: flex; gap: 10px; width: 100%; }
-        .mp-btn { flex: 1; margin: 4px 0; padding: 10px; color: #fff; border: none; border-radius: 5px; font-size: 14px; font-weight: bold; cursor: pointer; }
+        #mc-logo {
+            text-align: center; margin-bottom: 25px;
+            font-size: 32px; font-weight: 900; color: #fff;
+            text-shadow: 3px 3px 0px #3f3f3f, 6px 6px 0px #000;
+            letter-spacing: 2px; transform: scaleY(1.1);
+        }
+
+        #mc-menu {
+            display: flex; flex-direction: column; gap: 10px; width: 340px; max-width: 90%;
+        }
+
+        .mc-btn {
+            background: #737373; color: #e0e0e0; border: 3px solid #3c3c3c;
+            border-top-color: #a0a0a0; border-left-color: #a0a0a0;
+            padding: 10px; font-size: 15px; font-weight: bold; text-shadow: 2px 2px #000;
+            cursor: pointer; text-align: center; font-family: inherit;
+            box-shadow: inset -2px -2px 0px #2a2a2a, inset 2px 2px 0px #b5b5b5;
+        }
+
+        .mc-btn:hover {
+            background: #8b8b8b; color: #fff; border-color: #4a4a4a;
+            border-top-color: #b5b5b5; border-left-color: #b5b5b5;
+        }
+
+        .mc-btn:active {
+            border: 3px solid #2a2a2a; border-top-color: #1a1a1a; border-left-color: #1a1a1a;
+            background: #5a5a5a;
+        }
+
+        .mc-row { display: flex; gap: 10px; width: 100%; }
+        .mc-row .mc-btn { flex: 1; }
+
+        #room-input {
+            width: 100%; padding: 8px; text-align: center; font-size: 14px;
+            background: #000; border: 2px solid #a0a0a0; color: #fff;
+            font-family: inherit; font-weight: bold; outline: none;
+        }
+
+        .mc-option-container {
+            background: rgba(0,0,0,0.4); border: 2px solid #3c3c3c; padding: 10px;
+            display: flex; flex-direction: column; gap: 8px; margin-bottom: 5px;
+        }
+
+        .mc-label { font-size: 12px; color: #aaa; text-shadow: 1px 1px #000; text-align: left; font-weight: bold; }
+        .mc-select {
+            width: 100%; padding: 6px; background: #222; color: #fff;
+            border: 2px solid #555; font-family: inherit; font-size: 13px; outline: none;
+        }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -167,9 +200,6 @@
 </head>
 <body>
     <div id="game-container">
-        <!-- Top Left Refill Button -->
-        <button id="refill-btn" onclick="refillItems()">⚡ REFILL [0-64]</button>
-
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
@@ -179,16 +209,21 @@
         <div id="death-screen">
             <div id="death-box">
                 <h1>YOU DIED!</h1>
-                <p id="death-message-text">YOU WERE SLAIN!</p>
+                <p id="death-message">YOU WERE SLAIN BY AI STEVE!</p>
                 <button class="respawn-btn" id="btn-respawn">RESPAWN</button>
             </div>
         </div>
 
         <!-- Touch Joysticks & Buttons -->
-        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+        <div id="joystick-zone">
+            <div style="grid-column:2;grid-row:1;" class="dpad-btn" id="dpad-up">▲</div>
+            <div style="grid-column:1;grid-row:2;" class="dpad-btn" id="dpad-left">◀</div>
+            <div style="grid-column:2;grid-row:2;" class="dpad-btn" id="dpad-jump">◆</div>
+            <div style="grid-column:3;grid-row:2;" class="dpad-btn" id="dpad-right">▶</div>
+            <div style="grid-column:2;grid-row:3;" class="dpad-btn" id="dpad-down">▼</div>
+        </div>
         <div id="mobile-buttons">
             <div class="mobile-btn" id="btn-inv" style="border-color:#ffaa00;">INV</div>
-            <div class="mobile-btn" id="btn-jump">JUMP</div>
             <div class="mobile-btn" id="btn-hit" style="border-color:#ff5555;">HIT</div>
             <div class="mobile-btn" id="btn-place" style="border-color:#55ff55;">PLACE</div>
         </div>
@@ -232,7 +267,7 @@
             <!-- Hotbar (9 Slots) -->
             <div id="hotbar-wrapper">
                 <div id="hotbar">
-                    <div class="slot active" id="slot-1" onclick="handleSlotClick('hotbar', 0)"><span class="slot-num">1</span><span class="slot-icon">🗡️</span><span class="count-badge" id="hotbar-count-0"></span></div>
+                    <div class="slot active" id="slot-1" onclick="handleSlotClick('hotbar', 0)"><span class="slot-num">1</span><span class="slot-icon">🗡️️</span><span class="count-badge" id="hotbar-count-0"></span></div>
                     <div class="slot" id="slot-2" onclick="handleSlotClick('hotbar', 1)"><span class="slot-num">2</span><span class="slot-icon"><div class="pixel-gapple"></div></span><span class="count-badge" id="hotbar-count-1">64</span></div>
                     <div class="slot" id="slot-3" onclick="handleSlotClick('hotbar', 2)"><span class="slot-num">3</span><span class="slot-icon">🔮</span><span class="count-badge" id="hotbar-count-2">64</span></div>
                     <div class="slot" id="slot-4" onclick="handleSlotClick('hotbar', 3)"><span class="slot-num">4</span><span class="slot-icon">⬛</span><span class="count-badge" id="hotbar-count-3">64</span></div>
@@ -245,42 +280,49 @@
             </div>
         </div>
 
-        <!-- Start Overlay -->
+        <!-- Minecraft Classic Style Main Menu Start Overlay -->
         <div id="blocker">
-            <div id="instructions">
-                <h1 style="color:#ff0055; margin-bottom:10px; font-size: 22px;">DONUT SMP CRYSTAL PVP</h1>
-                
-                <div style="background: #111; padding: 12px; border-radius: 6px; margin-bottom: 12px; border: 1px solid #333;">
-                    <div class="option-group">
-                        <label>BOT DIFFICULTY (FOR VS AI BOT)</label>
-                        <select id="bot-difficulty-select" class="option-select">
-                            <option value="easy">Easy Mode</option>
-                            <option value="medium" selected>Medium Mode</option>
-                            <option value="hard">Hard Mode</option>
-                        </select>
-                    </div>
+            <div id="mc-logo">
+                Donut SMP - End Crystal PvP
+            </div>
 
-                    <div class="option-group">
-                        <label>FIELD OF VIEW (FOV)</label>
-                        <select id="fov-select" class="option-select">
-                            <option value="60">60° (Narrow)</option>
-                            <option value="75" selected>75° (Standard)</option>
-                            <option value="90">90° (Quake Pro / Wide)</option>
-                            <option value="110">110° (Ultra Wide)</option>
-                        </select>
+            <div id="mc-menu">
+                <div class="mc-option-container">
+                    <div class="mc-label">PVP KIT</div>
+                    <select id="kit-select" class="mc-select">
+                        <option value="crystal_pvp" selected>Crystal PvP Kit (Crystals + Obsidian)</option>
+                        <option value="mace_elytra">Mace & Elytra Kit (Mace + Fireworks)</option>
+                        <option value="archer">Archer Kit (Crossbow + Bow + Arrows)</option>
+                    </select>
+
+                    <div class="mc-row">
+                        <div style="flex:1;">
+                            <div class="mc-label">FIELD OF VIEW (FOV)</div>
+                            <select id="fov-select" class="mc-select">
+                                <option value="70">Normal (70)</option>
+                                <option value="85" selected>PvP (85)</option>
+                                <option value="100">Pro (100)</option>
+                                <option value="110">Quake Pro (110)</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <div class="mc-label">DIFFICULTY</div>
+                            <select id="difficulty-select" class="mc-select">
+                                <option value="easy">Easy</option>
+                                <option value="medium" selected>Normal</option>
+                                <option value="hard">Hard</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <p style="color:#ffaa00; font-weight:bold; margin-bottom:12px; font-size: 15px;">Choose Mode to Play:</p>
-                
-                <button class="mode-btn" id="btn-mode-ai">1. PLAY VS UPGRADED STEVE AI BOT</button>
-                <button class="mode-btn" id="btn-mode-bro" style="background:#aa00ff;">2. PLAY ON SINGLE DEVICE (2P DUEL)</button>
-                
-                <hr style="margin:10px 0; border:1px solid #444;">
-                
+                <button class="mc-btn" id="btn-mode-ai">Singleplayer</button>
+                <button class="mc-btn" id="btn-join-mp">Multiplayer</button>
+                <button class="mc-btn" id="btn-random-player" style="background:#5c735c;">Random Player</button>
                 <input type="number" id="room-input" placeholder="Enter Room Code (e.g. 1234)" />
-                <div class="mp-btn-container">
-                    <button class="mp-btn" id="btn-join-mp" style="background:#0077ff; width:100%;">JOIN / HOST ROOM</button>
+
+                <div class="mc-row" style="margin-top: 5px;">
+                    <button class="mc-btn" id="btn-mode-bro">Single Device 2P</button>
                 </div>
             </div>
         </div>
@@ -296,6 +338,7 @@
         const PLAYER_EYE_HEIGHT = 1.6;
 
         let botDifficulty = 'medium';
+        let selectedKit = 'crystal_pvp';
         let isMobile = false;
         let touchLookID = null, touchMoveID = null;
         let touchLookLastX = 0, touchLookLastY = 0;
@@ -308,9 +351,11 @@
         let textTimeout = null;
         let isInventoryOpen = false;
 
-        // Inventory data arrays (Hotbar: 9 slots, Main Inventory: 27 slots with a balanced mix)
+        let randomMatchmakingActive = false;
+
+        // Inventory data arrays
         let hotbarData = [
-            { icon: '🗡', type: 'sword', count: '' },
+            { icon: '🗡️', type: 'sword', count: '' },
             { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
             { icon: '🔮', type: 'crystal', count: 64 },
             { icon: '⬛', type: 'obsidian', count: 64 },
@@ -333,22 +378,6 @@
             { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 }, { icon: '🗿', type: 'totem', count: 64 }, { icon: '🚀', type: 'firework', count: 64 }
         ];
 
-        // Refill all items to max count (64) and restore full health
-        function refillItems() {
-            hotbarData.forEach(item => {
-                if (item && item.type !== 'sword') item.count = 64;
-            });
-            inventoryData.forEach(item => {
-                if (item && item.type !== 'sword') item.count = 64;
-            });
-            playerHealth = maxHealth;
-            updateHeartsUI();
-            updateInventoryUI();
-            playSound('eat');
-            showActionText("⚡ ITEMS & HEALTH REFILLED (0 -> 64)!");
-        }
-
-        // Drag and drop tracking state
         let draggedItem = null;
 
         let counts = { 
@@ -370,6 +399,48 @@
             set enderpearl(val) { setCountByType('enderpearl', val); }
         };
 
+        function applyKitSelection(kitName) {
+            if (kitName === 'mace_elytra') {
+                hotbarData = [
+                    { icon: '🔨', type: 'mace', count: '' },
+                    { icon: '🚀', type: 'firework', count: 64 },
+                    { icon: '🟣', type: 'enderpearl', count: 64 },
+                    { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
+                    { icon: '🗿', type: 'totem', count: 64 },
+                    { icon: '🔮', type: 'crystal', count: 64 },
+                    { icon: '⬛', type: 'obsidian', count: 64 },
+                    { icon: '🏹', type: 'arrow', count: 64 },
+                    { icon: '🗡️', type: 'sword', count: '' }
+                ];
+            } else if (kitName === 'archer') {
+                hotbarData = [
+                    { icon: '🏹', type: 'arrow', count: 64 },
+                    { icon: '🗡️', type: 'sword', count: '' },
+                    { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
+                    { icon: '🗿', type: 'totem', count: 64 },
+                    { icon: '🟣', type: 'enderpearl', count: 64 },
+                    { icon: '🚀', type: 'firework', count: 64 },
+                    { icon: '🔮', type: 'crystal', count: 64 },
+                    { icon: '⬛', type: 'obsidian', count: 64 },
+                    { icon: '🔨', type: 'mace', count: 64 }
+                ];
+            } else {
+                hotbarData = [
+                    { icon: '🗡️', type: 'sword', count: '' },
+                    { icon: '<div class="pixel-gapple"></div>', type: 'gapple', count: 64 },
+                    { icon: '🔮', type: 'crystal', count: 64 },
+                    { icon: '⬛', type: 'obsidian', count: 64 },
+                    { icon: '🗿', type: 'totem', count: 64 },
+                    { icon: '🏹', type: 'arrow', count: 64 },
+                    { icon: '🚀', type: 'firework', count: 64 },
+                    { icon: '🔨', type: 'mace', count: 64 },
+                    { icon: '🟣', type: 'enderpearl', count: 64 }
+                ];
+            }
+            updateInventoryUI();
+            selectSlot(1);
+        }
+
         function getCountByType(type) {
             let total = 0;
             hotbarData.forEach(item => { if (item && item.type === type) total += (typeof item.count === 'number' ? item.count : 1); });
@@ -378,19 +449,38 @@
         }
 
         function setCountByType(type, val) {
-            let rem = val;
-            hotbarData.forEach(item => {
-                if (item && item.type === type) {
-                    item.count = Math.min(64, rem);
-                    rem -= item.count;
+            const current = getCountByType(type);
+            if (val < current) {
+                // Using an item: drain the stack in the hotbar first (64 -> 63 -> 62...)
+                let diff = current - val;
+                const stacks = hotbarData.concat(inventoryData);
+                for (const item of stacks) {
+                    if (diff <= 0) break;
+                    if (item && item.type === type && typeof item.count === 'number' && item.count > 0) {
+                        const take = Math.min(item.count, diff);
+                        item.count -= take;
+                        diff -= take;
+                    }
                 }
-            });
-            inventoryData.forEach(item => {
-                if (item && item.type === type) {
-                    item.count = Math.min(64, rem);
-                    rem -= item.count;
+            } else if (val > current) {
+                // Adding items: fill stacks up to 64
+                let add = val - current;
+                const stacks = hotbarData.concat(inventoryData);
+                for (const item of stacks) {
+                    if (add <= 0) break;
+                    if (item && item.type === type && typeof item.count === 'number' && item.count < 64) {
+                        const put = Math.min(64 - item.count, add);
+                        item.count += put;
+                        add -= put;
+                    }
                 }
-            });
+            }
+            updateInventoryUI();
+        }
+
+        function refillAllItems() {
+            hotbarData.forEach(item => { if (item && typeof item.count === 'number') item.count = 64; });
+            inventoryData.forEach(item => { if (item && typeof item.count === 'number') item.count = 64; });
             updateInventoryUI();
         }
 
@@ -420,6 +510,7 @@
         const endCrystals = [];
         const dummyTargets = [];
         const particleSystems = [];
+        const placedBlocks = [];
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -499,7 +590,7 @@
             scene.background = new THREE.Color(0x5c88c7);
             scene.fog = new THREE.FogExp2(0x5c88c7, 0.005);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera = new THREE.PerspectiveCamera(85, window.innerWidth / window.innerHeight, 0.1, 1000);
             raycaster = new THREE.Raycaster();
 
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -516,13 +607,18 @@
 
             controls = new THREE.PointerLockControls(camera, document.body);
 
-            document.getElementById('bot-difficulty-select').addEventListener('change', (e) => {
-                botDifficulty = e.target.value;
+            document.getElementById('kit-select').addEventListener('change', (e) => {
+                selectedKit = e.target.value;
+                applyKitSelection(selectedKit);
             });
 
             document.getElementById('fov-select').addEventListener('change', (e) => {
                 camera.fov = parseFloat(e.target.value);
                 camera.updateProjectionMatrix();
+            });
+
+            document.getElementById('difficulty-select').addEventListener('change', (e) => {
+                botDifficulty = e.target.value;
             });
 
             document.getElementById('btn-mode-ai').addEventListener('click', () => {
@@ -546,6 +642,23 @@
                 gameMode = 'mp';
                 startGame();
                 initMultiplayer(roomCode);
+            });
+
+            document.getElementById('btn-random-player').addEventListener('click', () => {
+                gameMode = 'mp';
+                randomMatchmakingActive = true;
+                startGame();
+                showActionText("Searching for a Random Player...");
+                initMultiplayer("random_global_match");
+
+                setTimeout(() => {
+                    if (randomMatchmakingActive && (!peerConn || !peerConn.open)) {
+                        showActionText("No online player found! Joining AI Bot...");
+                        gameMode = 'ai';
+                        spawnAISteve();
+                        randomMatchmakingActive = false;
+                    }
+                }, 7000);
             });
 
             document.getElementById('btn-respawn').addEventListener('click', () => {
@@ -573,16 +686,74 @@
             if (!isMobile) {
                 controls.lock();
             } else {
-                document.getElementById('joystick-zone').style.display = 'block';
+                document.getElementById('joystick-zone').style.display = 'grid';
                 document.getElementById('mobile-buttons').style.display = 'flex';
             }
+        }
+
+        function resetGameToMenu() {
+            if (controls && controls.isLocked) controls.unlock();
+
+            // Clear PeerJS Connection
+            if (peerConn) { peerConn.close(); peerConn = null; }
+            if (peer) { peer.destroy(); peer = null; }
+            randomMatchmakingActive = false;
+
+            // Clear dynamic scene entities
+            if (aiSteveMesh) { scene.remove(aiSteveMesh); aiSteveMesh = null; }
+            if (remotePlayerMesh) { scene.remove(remotePlayerMesh); remotePlayerMesh = null; }
+            if (broPlayerMesh) { scene.remove(broPlayerMesh); broPlayerMesh = null; }
+
+            endCrystals.forEach(c => scene.remove(c));
+            endCrystals.length = 0;
+
+            placedBlocks.forEach(b => {
+                scene.remove(b);
+                const idxP = placeableObjects.indexOf(b);
+                if (idxP > -1) placeableObjects.splice(idxP, 1);
+                const idxS = solidColliders.indexOf(b);
+                if (idxS > -1) solidColliders.splice(idxS, 1);
+            });
+            placedBlocks.length = 0;
+
+            activeArrows.forEach(a => scene.remove(a.mesh));
+            activeArrows.length = 0;
+
+            activeEnderPearls.forEach(p => scene.remove(p.mesh));
+            activeEnderPearls.length = 0;
+
+            particleSystems.forEach(p => scene.remove(p.mesh));
+            particleSystems.length = 0;
+
+            // Reset Player states
+            playerHealth = maxHealth;
+            aiSteveHealth = maxHealth;
+            aiSteveTotems = 64;
+            remotePlayerHealth = maxHealth;
+            remotePlayerTotems = 64;
+            gameMode = 'none';
+            isGliding = false;
+
+            applyKitSelection(selectedKit);
+            updateHeartsUI();
+
+            controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
+            velocity.set(0, 0, 0);
+
+            // Hide Game UIs and show Menu Screen
+            document.getElementById('death-screen').style.display = 'none';
+            document.getElementById('inventory-screen').style.display = 'none';
+            if (isMobile) {
+                document.getElementById('joystick-zone').style.display = 'none';
+                document.getElementById('mobile-buttons').style.display = 'none';
+            }
+            document.getElementById('blocker').style.display = 'flex';
         }
 
         function respawnPlayer() {
             document.getElementById('death-screen').style.display = 'none';
             playerHealth = maxHealth;
-            counts.totem = 64;
-            updateInventoryUI();
+            refillAllItems();
             updateHeartsUI();
             controls.getObject().position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
             velocity.set(0, 0, 0);
@@ -591,17 +762,7 @@
             }
         }
 
-        // Broadcast death message to everyone in match / UI
-        function broadcastDeathNotice(deathMessage) {
-            showActionText("☠️ " + deathMessage);
-            if (peerConn && peerConn.open) {
-                peerConn.send({ type: 'death_notice', message: deathMessage });
-            }
-        }
-
-        // Inventory Slot Drag & Drop / Swapping Logic
         function updateInventoryUI() {
-            // Update Hotbar UI
             for (let i = 0; i < 9; i++) {
                 const item = hotbarData[i];
                 const slotEl = document.getElementById(`slot-${i + 1}`);
@@ -618,7 +779,6 @@
                 }
             }
 
-            // Update Full Inventory Screen UI
             const container = document.getElementById('inv-grid-container');
             container.innerHTML = '';
 
@@ -644,14 +804,12 @@
             const clickedItem = targetCollection[index];
 
             if (!draggedItem) {
-                if (!clickedItem) return; // Empty slot clicked
+                if (!clickedItem) return;
                 draggedItem = { container: containerName, index: index, item: clickedItem };
                 showActionText("Picked up item. Click destination slot!");
                 playSound('eat');
             } else {
-                // Swap or place into destination slot
                 targetCollection[index] = draggedItem.item;
-                
                 const origCollection = draggedItem.container === 'hotbar' ? hotbarData : inventoryData;
                 origCollection[draggedItem.index] = clickedItem;
 
@@ -661,7 +819,7 @@
             }
 
             updateInventoryUI();
-            selectSlot(currentSlot); // refresh active held item
+            selectSlot(currentSlot);
         }
 
         function toggleInventory() {
@@ -842,7 +1000,7 @@
                     showActionText(`ENEMY POPPED A TOTEM! (${remotePlayerTotems} left)`);
                 } else {
                     playSound('explode');
-                    broadcastDeathNotice("Enemy Player died!");
+                    showActionText("YOU KILLED THE ENEMY!");
                     remotePlayerHealth = maxHealth;
                     remotePlayerTotems = 64;
                 }
@@ -862,7 +1020,7 @@
                     showActionText(`AI STEVE POPPED A TOTEM! (${aiSteveTotems} left)`);
                 } else {
                     playSound('explode');
-                    broadcastDeathNotice("AI Steve was slain!");
+                    showActionText("YOU KILLED AI STEVE!");
                     scene.remove(aiSteveMesh);
                     aiSteveMesh = null;
 
@@ -950,7 +1108,7 @@
 
                         if (dist < 4.0) {
                             const smashDmg = botDifficulty === 'hard' ? 7 : botDifficulty === 'medium' ? 5 : 3;
-                            takeDamage(smashDmg, "AI Steve");
+                            takeDamage(smashDmg);
                             showActionText("AI STEVE LANDED A MACE SMASH ATTACK!");
                         }
                     }
@@ -992,7 +1150,7 @@
                         aiSteveTimer = 0;
                         playSound('mace');
                         const maceDmg = botDifficulty === 'hard' ? 4 : botDifficulty === 'medium' ? 3 : 2;
-                        takeDamage(maceDmg, "AI Steve");
+                        takeDamage(maceDmg);
                         showActionText("AI Steve Hit You with Mace!");
                     }
                 }
@@ -1021,6 +1179,7 @@
                 
                 conn.on('open', () => {
                     peerConn = conn;
+                    randomMatchmakingActive = false;
                     setupPeerEvents(peerConn);
                     showActionText("Joined Room " + roomCode + " as Client!");
                 });
@@ -1050,6 +1209,7 @@
 
                 peer.on('connection', (conn) => {
                     peerConn = conn;
+                    randomMatchmakingActive = false;
                     setupPeerEvents(peerConn);
                     showActionText("Player Joined! Fight Start!");
                 });
@@ -1083,10 +1243,8 @@
                     damageRemotePlayer(data.amount);
                     if (remotePlayerMesh) spawnParticleExplosion(remotePlayerMesh.position);
                 } else if (data.type === 'hit_me') {
-                    takeDamage(data.damage || 3, "Enemy Player");
+                    takeDamage(data.damage || 3, 'Enemy Player');
                     showActionText("Hit by Enemy Player!");
-                } else if (data.type === 'death_notice') {
-                    showActionText("☠️ " + data.message);
                 }
             });
         }
@@ -1374,19 +1532,40 @@
             });
         }
 
-        function setupMobileTouchControls() {
-            const joystickZone = document.getElementById('joystick-zone');
-            const joystickKnob = document.getElementById('joystick-knob');
-            const rect = joystickZone.getBoundingClientRect();
-            joystickCenter = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+        function mobileJump() {
+            if (canJump) { 
+                velocity.y += 11.0; 
+                canJump = false; 
+            } else {
+                const activeItem = hotbarData[currentSlot - 1];
+                if (activeItem && activeItem.type === 'firework' && !isGliding) {
+                    isGliding = true;
+                    showActionText("Elytra Gliding!");
+                }
+            }
+        }
 
+        function setupMobileTouchControls() {
+            function bindHold(id, onDown, onUp) {
+                const el = document.getElementById(id);
+                el.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); onDown(); }, { passive: false });
+                el.addEventListener('touchend', (e) => { e.preventDefault(); onUp(); }, { passive: false });
+                el.addEventListener('touchcancel', () => { onUp(); });
+            }
+
+            // D-pad (left/right use the same flags as the A/D keys)
+            bindHold('dpad-up', () => { moveForward = true; }, () => { moveForward = false; });
+            bindHold('dpad-down', () => { moveBackward = true; }, () => { moveBackward = false; });
+            bindHold('dpad-left', () => { moveRight = true; }, () => { moveRight = false; });
+            bindHold('dpad-right', () => { moveLeft = true; }, () => { moveLeft = false; });
+            bindHold('dpad-jump', () => { mobileJump(); }, () => {});
+
+            // Any touch outside the buttons rotates the camera
             window.addEventListener('touchstart', (e) => {
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
-                    if (touch.clientX < window.innerWidth / 2 && touchMoveID === null) {
-                        touchMoveID = touch.identifier;
-                        updateJoystick(touch);
-                    } else if (touch.clientX >= window.innerWidth / 2 && touchLookID === null) {
+                    if (touch.target && touch.target.closest && touch.target.closest('.dpad-btn, .mobile-btn, #hotbar, #inventory-screen, #death-screen, #blocker')) continue;
+                    if (touchLookID === null) {
                         touchLookID = touch.identifier;
                         touchLookLastX = touch.clientX;
                         touchLookLastY = touch.clientY;
@@ -1397,9 +1576,7 @@
             window.addEventListener('touchmove', (e) => {
                 for (let i = 0; i < e.changedTouches.length; i++) {
                     const touch = e.changedTouches[i];
-                    if (touch.identifier === touchMoveID) {
-                        updateJoystick(touch);
-                    } else if (touch.identifier === touchLookID && !isInventoryOpen) {
+                    if (touch.identifier === touchLookID && !isInventoryOpen) {
                         const deltaX = touch.clientX - touchLookLastX;
                         const deltaY = touch.clientY - touchLookLastY;
 
@@ -1415,55 +1592,17 @@
                 }
             }, { passive: false });
 
-            window.addEventListener('touchend', resetTouches);
-            window.addEventListener('touchcancel', resetTouches);
-
             function resetTouches(e) {
                 for (let i = 0; i < e.changedTouches.length; i++) {
-                    const touch = e.changedTouches[i];
-                    if (touch.identifier === touchMoveID) {
-                        touchMoveID = null;
-                        moveForward = moveBackward = moveLeft = moveRight = false;
-                        joystickKnob.style.transform = `translate(0px, 0px)`;
-                    } else if (touch.identifier === touchLookID) {
-                        touchLookID = null;
-                    }
+                    if (e.changedTouches[i].identifier === touchLookID) touchLookID = null;
                 }
             }
-
-            function updateJoystick(touch) {
-                const dx = touch.clientX - joystickCenter.x;
-                const dy = touch.clientY - joystickCenter.y;
-                const dist = Math.min(Math.hypot(dx, dy), 40);
-                const angle = Math.atan2(dy, dx);
-
-                const kx = Math.cos(angle) * dist;
-                const ky = Math.sin(angle) * dist;
-                joystickKnob.style.transform = `translate(${kx}px, ${ky}px)`;
-
-                moveForward = dy < -10;
-                moveBackward = dy > 10;
-                moveLeft = dx > 10;
-                moveRight = dx < -10;
-            }
+            window.addEventListener('touchend', resetTouches);
+            window.addEventListener('touchcancel', resetTouches);
 
             document.getElementById('btn-inv').addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 toggleInventory();
-            });
-
-            document.getElementById('btn-jump').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                if (canJump) { 
-                    velocity.y += 11.0; 
-                    canJump = false; 
-                } else {
-                    const activeItem = hotbarData[currentSlot - 1];
-                    if (activeItem && activeItem.type === 'firework' && !isGliding) {
-                        isGliding = true;
-                        showActionText("Elytra Gliding!");
-                    }
-                }
             });
 
             document.getElementById('btn-hit').addEventListener('touchstart', (e) => {
@@ -1679,6 +1818,7 @@
 
             placeableObjects.push(mesh);
             solidColliders.push(mesh);
+            placedBlocks.push(mesh);
         }
 
         function placeEndCrystal(x, y, z) {
@@ -1702,7 +1842,7 @@
             const dist = camera.position.distanceTo(crystalObj.position);
             if (dist < 6.0) {
                 const dmg = Math.round((6.0 - dist) * 1.5) + 3;
-                takeDamage(dmg, "End Crystal Explosion");
+                takeDamage(dmg, 'Ender Crystal');
                 showActionText(`BOOM! End Crystal Damage (-${dmg} HP)`);
             }
         }
@@ -1717,7 +1857,7 @@
             showActionText("Ate Golden Apple (+4 Health)");
         }
 
-        function takeDamage(amount, killerName = "Enemy") {
+        function takeDamage(amount, cause = 'AI Steve') {
             playerHealth -= amount;
             updateHeartsUI();
 
@@ -1738,9 +1878,10 @@
                     showActionText("TOTEM OF UNDYING SAVED YOU!");
                 } else {
                     if (!isMobile) controls.unlock();
-                    document.getElementById('death-message-text').innerText = `YOU WERE SLAIN BY ${killerName.toUpperCase()}!`;
+                    const deathText = "YOU WERE SLAIN BY " + cause.toUpperCase() + "!";
+                    document.getElementById('death-message').innerText = deathText;
                     document.getElementById('death-screen').style.display = 'flex';
-                    broadcastDeathNotice(`Player was slain by ${killerName}!`);
+                    showActionText(deathText);
                 }
             }
         }
@@ -1783,7 +1924,7 @@
             el.innerText = text;
             el.style.opacity = '1';
             clearTimeout(textTimeout);
-            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+            textTimeout = setTimeout(() => { el.style.opacity = '0'; }, 2000);
         }
 
         function animate() {
@@ -1830,86 +1971,107 @@
                 const isInVoid = distFromCenter > arenaRadius;
 
                 if (!isInVoid) {
-                    for (let i = 0; i < solidColliders.length; i++) {
-                        const box = solidColliders[i];
-                        const boxPos = box.position;
-                        const boxScale = box.scale;
+                    camObj.position.y += velocity.y * delta;
+                    if (camObj.position.y < 0.5 + PLAYER_EYE_HEIGHT) {
+                        velocity.y = 0;
+                        camObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
+                        canJump = true;
+                        if (isGliding) {
+                            isGliding = false;
+                            showActionText("Landed!");
+                        }
+                    }
+                } else {
+                    camObj.position.y += velocity.y * delta;
+                    if (camObj.position.y < -35) {
+                        takeDamage(10, 'Void');
+                        camObj.position.set(0, 0.5 + PLAYER_EYE_HEIGHT, 0);
+                        velocity.set(0, 0, 0);
+                    }
+                }
 
-                        const minX = boxPos.x - boxScale.x / 2 - playerRadius;
-                        const maxX = boxPos.x + boxScale.x / 2 + playerRadius;
-                        const minZ = boxPos.z - boxScale.z / 2 - playerRadius;
-                        const maxZ = boxPos.z + boxScale.z / 2 + playerRadius;
-                        const minY = boxPos.y - boxScale.y / 2 - PLAYER_EYE_HEIGHT;
-                        const maxY = boxPos.y + boxScale.y / 2 + PLAYER_EYE_HEIGHT;
+                // Collisions against obsidian blocks
+                for (let box of solidColliders) {
+                    const minX = box.position.x - 0.5 - playerRadius;
+                    const maxX = box.position.x + 0.5 + playerRadius;
+                    const minZ = box.position.z - 0.5 - playerRadius;
+                    const maxZ = box.position.z + 0.5 + playerRadius;
+                    const minY = box.position.y - 0.5;
+                    const maxY = box.position.y + 0.5 + PLAYER_EYE_HEIGHT;
 
-                        if (camObj.position.x > minX && camObj.position.x < maxX &&
-                            camObj.position.z > minZ && camObj.position.z < maxZ &&
-                            camObj.position.y > minY && camObj.position.y < maxY) {
+                    if (camObj.position.x > minX && camObj.position.x < maxX &&
+                        camObj.position.z > minZ && camObj.position.z < maxZ &&
+                        camObj.position.y > minY && camObj.position.y < maxY) {
+                        
+                        if (oldPos.y >= maxY - 0.2) {
+                            camObj.position.y = maxY;
+                            velocity.y = 0;
+                            canJump = true;
+                        } else {
                             camObj.position.x = oldPos.x;
                             camObj.position.z = oldPos.z;
-                            velocity.x = 0;
-                            velocity.z = 0;
-                            break;
                         }
                     }
                 }
 
-                camObj.position.y += velocity.y * delta;
-
-                const floorLimit = isInVoid ? -50.0 : 0.5 + PLAYER_EYE_HEIGHT;
-
-                if (camObj.position.y <= floorLimit) {
-                    if (isInVoid) {
-                        takeDamage(maxHealth, "The Void");
-                        camObj.position.set(0, 15, 0);
-                        velocity.set(0, 0, 0);
-                        isGliding = false;
-                    } else {
-                        camObj.position.y = 0.5 + PLAYER_EYE_HEIGHT;
-                        velocity.y = 0;
-                        canJump = true;
-                        isGliding = false;
-                    }
-                }
-
-                broadcastPlayerPos();
+                if (gameMode === 'mp') broadcastPlayerPos();
+                if (gameMode === 'ai') updateAISteveLogic(delta);
             }
 
-            endCrystals.forEach(c => {
-                c.userData.floatOffset += delta * 3;
-                c.position.y += Math.sin(c.userData.floatOffset) * 0.003;
-                if (c.userData.outerCrystal) {
-                    c.userData.outerCrystal.rotation.y += delta;
+            // Animate End Crystals
+            endCrystals.forEach(crystal => {
+                if (crystal.userData.outerCrystal) {
+                    crystal.userData.outerCrystal.rotation.y += delta * 1.8;
+                    crystal.userData.outerCrystal.position.y = 0.85 + Math.sin(time * 0.003 + crystal.userData.floatOffset) * 0.08;
                 }
             });
 
+            // Update Arrows
             for (let i = activeArrows.length - 1; i >= 0; i--) {
-                const arr = activeArrows[i];
-                arr.mesh.position.add(arr.dir.clone().multiplyScalar(delta));
-                arr.age += delta;
+                const arrow = activeArrows[i];
+                arrow.mesh.position.add(arrow.dir.clone().multiplyScalar(delta));
+                arrow.age += delta;
 
-                if (arr.age > 3.0) {
-                    scene.remove(arr.mesh);
+                if (!arrow.isFromBot && aiSteveMesh && arrow.mesh.position.distanceTo(aiSteveMesh.position) < 1.2) {
+                    damageAISteve(4);
+                    spawnParticleExplosion(arrow.mesh.position);
+                    scene.remove(arrow.mesh);
+                    activeArrows.splice(i, 1);
+                    continue;
+                }
+
+                if (arrow.isFromBot && arrow.mesh.position.distanceTo(camera.position) < 1.2) {
+                    takeDamage(3);
+                    spawnParticleExplosion(arrow.mesh.position);
+                    scene.remove(arrow.mesh);
+                    activeArrows.splice(i, 1);
+                    continue;
+                }
+
+                if (arrow.age > 4.0 || arrow.mesh.position.y < 0) {
+                    scene.remove(arrow.mesh);
                     activeArrows.splice(i, 1);
                 }
             }
 
+            // Update Ender Pearls
             for (let i = activeEnderPearls.length - 1; i >= 0; i--) {
                 const pearl = activeEnderPearls[i];
-                pearl.mesh.position.add(pearl.velocity.clone().multiplyScalar(delta));
                 pearl.velocity.y -= 20.0 * delta;
+                pearl.mesh.position.add(pearl.velocity.clone().multiplyScalar(delta));
                 pearl.age += delta;
 
-                if (pearl.mesh.position.y <= 0.5 || pearl.age > 4.0) {
-                    controls.getObject().position.copy(pearl.mesh.position).add(new THREE.Vector3(0, PLAYER_EYE_HEIGHT, 0));
+                if (pearl.mesh.position.y <= 0.5 || pearl.age > 3.0) {
+                    controls.getObject().position.copy(pearl.mesh.position);
+                    controls.getObject().position.y = Math.max(0.5 + PLAYER_EYE_HEIGHT, pearl.mesh.position.y + PLAYER_EYE_HEIGHT);
+                    playSound('pearl');
+                    spawnParticleExplosion(pearl.mesh.position);
                     scene.remove(pearl.mesh);
                     activeEnderPearls.splice(i, 1);
-                    playSound('explode');
-                    spawnParticleExplosion(controls.getObject().position);
-                    showActionText("Ender Pearl Teleport!");
                 }
             }
 
+            // Update Particles
             for (let i = particleSystems.length - 1; i >= 0; i--) {
                 const p = particleSystems[i];
                 p.mesh.position.add(p.vel.clone().multiplyScalar(delta));
@@ -1918,12 +2080,6 @@
                     scene.remove(p.mesh);
                     particleSystems.splice(i, 1);
                 }
-            }
-
-            if (aiSteveMesh) updateAISteveLogic(delta);
-            if (broPlayerMesh && broPlayerMesh.position.y > 0.5) {
-                broPlayerMesh.position.y -= 9.8 * delta;
-                if (broPlayerMesh.position.y < 0.5) broPlayerMesh.position.y = 0.5;
             }
 
             renderer.render(scene, camera);
