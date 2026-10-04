@@ -1798,8 +1798,9 @@
             const actionBtn = document.getElementById('btn-hit');
             if (actionBtn) {
                 const isWeapon = (itemType === 'sword' || itemType === 'mace');
-                actionBtn.innerText = isWeapon ? 'HIT' : 'USE';
-                actionBtn.style.borderColor = isWeapon ? '#ff5555' : '#55ff55';
+                const isCrossbow = (itemType === 'arrow');
+                actionBtn.innerText = isWeapon ? 'HIT' : (isCrossbow ? 'SHOOT' : 'USE');
+                actionBtn.style.borderColor = (isWeapon || isCrossbow) ? '#ff5555' : '#55ff55';
             }
         }
 
