@@ -133,11 +133,11 @@
         @media (orientation: portrait) { body.is-mobile #rotate-overlay { display: flex; } }
 
         /* Mobile Controls Overlays */
-        #joystick-zone { position: absolute; bottom: 50px; left: 14px; display: none; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; z-index: 6; padding: 4px; background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+        #joystick-zone { transform-origin: bottom left; transform: scale(var(--ctrl-scale, 1)); position: absolute; bottom: 50px; left: 14px; display: none; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; z-index: 6; padding: 4px; background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
         .dpad-btn { background: #8b8b8b; color: #222; border: 3px solid #3c3c3c; border-top-color: #c6c6c6; border-left-color: #c6c6c6; box-shadow: inset -3px -3px 0 #555; display: flex; justify-content: center; align-items: center; font-size: 15px; font-weight: bold; border-width: 2px; box-shadow: inset -2px -2px 0 #555; }
         .dpad-btn:active { background: #b5b5b5; }
         
-        #mobile-buttons { position: absolute; bottom: 50px; right: 14px; display: none; flex-direction: column; gap: 6px; z-index: 6; }
+        #mobile-buttons { transform-origin: bottom right; transform: scale(var(--ctrl-scale, 1)); position: absolute; bottom: 50px; right: 14px; display: none; flex-direction: column; gap: 6px; z-index: 6; }
         .mobile-btn { width: 40px; height: 40px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 10px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
         .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
@@ -200,6 +200,22 @@
             width: 100%; padding: 6px; background: #222; color: #fff;
             border: 2px solid #555; font-family: inherit; font-size: 13px; outline: none;
         }
+
+        /* Menu: allow finger scrolling + typing (the global touch-action:none blocked both) */
+        #blocker, #blocker * { touch-action: pan-y; }
+        #room-input, .mc-select { user-select: text; -webkit-user-select: text; touch-action: manipulation; }
+        #ctrl-size { touch-action: pan-x; }
+        #blocker { overflow-y: auto; }
+
+        /* Phone landscape: two-column menu so everything fits on screen */
+        @media (max-height: 560px) {
+            #blocker { justify-content: flex-start; padding: 6px 0 14px; }
+            #mc-logo { font-size: 20px; margin-bottom: 8px; }
+            #mc-menu { width: 760px; max-width: 96%; display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; align-items: start; }
+            #mc-menu .mc-option-container { grid-column: 1; grid-row: 1 / span 6; margin-bottom: 0; }
+            #mc-menu > .mc-btn, #mc-menu > input, #mc-menu > .mc-row { grid-column: 2; margin-top: 0 !important; }
+            .mc-btn { padding: 8px; }
+        }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -234,7 +250,6 @@
         <div id="mobile-buttons">
             <div class="mobile-btn" id="btn-inv" style="border-color:#ffaa00;">INV</div>
             <div class="mobile-btn" id="btn-hit" style="border-color:#ff5555;">HIT</div>
-            <div class="mobile-btn" id="btn-place" style="border-color:#55ff55;">PLACE</div>
         </div>
 
         <!-- Full Inventory GUI Screen (Opened with 'E') -->
@@ -297,6 +312,8 @@
 
             <div id="mc-menu">
                 <div class="mc-option-container">
+                    <div class="mc-label" id="ctrl-size-label">MOBILE CONTROL SIZE: 100%</div>
+                    <input type="range" id="ctrl-size" min="50" max="160" step="5" value="100" style="width:100%;">
                     <div class="mc-label">PVP KIT</div>
                     <select id="kit-select" class="mc-select">
                         <option value="crystal_pvp" selected>Crystal PvP Kit (Crystals + Obsidian)</option>
@@ -361,6 +378,14 @@
         let isInventoryOpen = false;
 
         let randomMatchmakingActive = false;
+
+        function applyControlScale(pct) {
+            document.documentElement.style.setProperty('--ctrl-scale', (pct / 100).toString());
+            const label = document.getElementById('ctrl-size-label');
+            if (label) label.innerText = 'MOBILE CONTROL SIZE: ' + pct + '%';
+            const slider = document.getElementById('ctrl-size');
+            if (slider && slider.value !== String(pct)) slider.value = pct;
+        }
 
         // Inventory data arrays
         let hotbarData = [
@@ -616,6 +641,15 @@
             document.getElementById('game-container').appendChild(renderer.domElement);
 
             controls = new THREE.PointerLockControls(camera, document.body);
+
+            let savedScale = 100;
+            try { savedScale = parseInt(localStorage.getItem('ctrlScale')) || 100; } catch (err) {}
+            applyControlScale(savedScale);
+            document.getElementById('ctrl-size').addEventListener('input', (e) => {
+                const v = parseInt(e.target.value);
+                applyControlScale(v);
+                try { localStorage.setItem('ctrlScale', v); } catch (err) {}
+            });
 
             document.getElementById('kit-select').addEventListener('change', (e) => {
                 selectedKit = e.target.value;
@@ -1654,34 +1688,50 @@
                 toggleInventory();
             });
 
-            document.getElementById('btn-hit').addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                handleLeftClick();
-            });
+            let useHoldTimer = null;
+            const useBtn = document.getElementById('btn-hit');
 
-            let placeHoldTimer = null;
-            const placeBtn = document.getElementById('btn-place');
-
-            function stopPlaceHold() {
-                if (placeHoldTimer) { clearInterval(placeHoldTimer); placeHoldTimer = null; }
+            function stopUseHold() {
+                if (useHoldTimer) { clearInterval(useHoldTimer); useHoldTimer = null; }
             }
 
-            placeBtn.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleRightClick();
+            function startUse(e) {
+                if (e) { e.preventDefault(); e.stopPropagation(); }
+                if (isInventoryOpen) return;
+                useHeldItem();
 
                 const item = hotbarData[currentSlot - 1];
                 const type = item ? item.type : '';
-                // Hold to keep using fireworks / golden apples
-                if (type === 'firework' || type === 'gapple') {
-                    stopPlaceHold();
-                    placeHoldTimer = setInterval(handleRightClick, type === 'firework' ? 450 : 900);
+                const repeatMs = { firework: 450, gapple: 900, arrow: 500, sword: 450, mace: 700 }[type];
+                if (repeatMs) {
+                    stopUseHold();
+                    useHoldTimer = setInterval(useHeldItem, repeatMs);
                 }
-            }, { passive: false });
+            }
 
-            placeBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopPlaceHold(); }, { passive: false });
-            placeBtn.addEventListener('touchcancel', stopPlaceHold);
+            useBtn.addEventListener('touchstart', startUse, { passive: false });
+            useBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopUseHold(); }, { passive: false });
+            useBtn.addEventListener('touchcancel', stopUseHold);
+
+            // Make hotbar slots select instantly on touch (outside the inventory screen)
+            for (let i = 0; i < 9; i++) {
+                const slotEl = document.getElementById('slot-' + (i + 1));
+                slotEl.addEventListener('touchstart', (e) => {
+                    if (isInventoryOpen) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleSlotClick('hotbar', i);
+                }, { passive: false });
+            }
+        }
+
+        // USE button: does the right action for whatever you're holding
+        function useHeldItem() {
+            const item = hotbarData[currentSlot - 1];
+            const type = item ? item.type : '';
+            if (type === 'sword' || type === 'mace') handleLeftClick();
+            else if (type === 'arrow') shootCrossbow();
+            else handleRightClick();
         }
 
         function selectSlot(slotNum) {
@@ -1703,6 +1753,13 @@
             maceMesh.visible = (itemType === 'mace');
             enderpearlMesh.visible = (itemType === 'enderpearl');
             fireworkMesh.visible = (itemType === 'firework');
+
+            const actionBtn = document.getElementById('btn-hit');
+            if (actionBtn) {
+                const isWeapon = (itemType === 'sword' || itemType === 'mace');
+                actionBtn.innerText = isWeapon ? 'HIT' : 'USE';
+                actionBtn.style.borderColor = isWeapon ? '#ff5555' : '#55ff55';
+            }
         }
 
         function setupMouseInteraction() {
@@ -1787,9 +1844,10 @@
             const dir = new THREE.Vector3();
             camera.getWorldDirection(dir);
 
-            velocity.x += dir.x * 25.0;
-            velocity.y += dir.y * 20.0 + 5.0;
-            velocity.z += dir.z * 25.0;
+            velocity.x += dir.x * 40.0;
+            velocity.y += Math.max(dir.y, 0) * 20.0 + 14.0;
+            velocity.z += dir.z * 40.0;
+            canJump = false;
 
             isGliding = true;
             spawnParticleExplosion(camera.position);
