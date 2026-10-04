@@ -124,13 +124,21 @@
         .inv-slot:hover { background: #aaaaaa; }
         .inv-slot.selected-drag { border-color: #ffaa00; background: #d4a373; }
 
+        /* Mobile: smaller HUD + landscape-only */
+        body.is-mobile #hud { bottom: 6px; transform: translateX(-50%) scale(0.72); transform-origin: bottom center; }
+        body.is-mobile #action-text { top: 45%; font-size: 13px; }
+        body.is-mobile #mc-logo { font-size: 20px; margin-bottom: 10px; }
+        body.is-mobile #blocker { overflow-y: auto; justify-content: flex-start; padding: 10px 0; }
+        #rotate-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #111; color: #fff; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 18px; font-weight: bold; }
+        @media (orientation: portrait) { body.is-mobile #rotate-overlay { display: flex; } }
+
         /* Mobile Controls Overlays */
-        #joystick-zone { position: absolute; bottom: 20px; left: 20px; display: none; grid-template-columns: repeat(3, 52px); grid-template-rows: repeat(3, 52px); gap: 4px; z-index: 6; padding: 6px; background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
-        .dpad-btn { background: #8b8b8b; color: #222; border: 3px solid #3c3c3c; border-top-color: #c6c6c6; border-left-color: #c6c6c6; box-shadow: inset -3px -3px 0 #555; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: bold; }
+        #joystick-zone { position: absolute; bottom: 50px; left: 14px; display: none; grid-template-columns: repeat(3, 34px); grid-template-rows: repeat(3, 34px); gap: 3px; z-index: 6; padding: 4px; background: rgba(255, 255, 255, 0.12); border-radius: 8px; }
+        .dpad-btn { background: #8b8b8b; color: #222; border: 3px solid #3c3c3c; border-top-color: #c6c6c6; border-left-color: #c6c6c6; box-shadow: inset -3px -3px 0 #555; display: flex; justify-content: center; align-items: center; font-size: 15px; font-weight: bold; border-width: 2px; box-shadow: inset -2px -2px 0 #555; }
         .dpad-btn:active { background: #b5b5b5; }
         
-        #mobile-buttons { position: absolute; bottom: 20px; right: 20px; display: none; flex-direction: column; gap: 8px; z-index: 6; }
-        .mobile-btn { width: 54px; height: 54px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 12px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
+        #mobile-buttons { position: absolute; bottom: 50px; right: 14px; display: none; flex-direction: column; gap: 6px; z-index: 6; }
+        .mobile-btn { width: 40px; height: 40px; background: rgba(0, 0, 0, 0.6); border: 2px solid #fff; border-radius: 50%; color: #fff; font-size: 10px; font-weight: bold; display: flex; justify-content: center; align-items: center; text-align: center; }
         .mobile-btn:active { background: rgba(255, 255, 255, 0.4); }
 
         /* Action Text Overlay */
@@ -200,6 +208,7 @@
 </head>
 <body>
     <div id="game-container">
+        <div id="rotate-overlay"><div style="font-size:48px;">⟳</div><div>Rotate your phone<br>to play (landscape)</div></div>
         <div id="crosshair"></div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
@@ -585,6 +594,7 @@
 
         function init() {
             isMobile = detectMobile();
+            if (isMobile) document.body.classList.add('is-mobile');
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x5c88c7);
@@ -681,11 +691,26 @@
             animate();
         }
 
+        function lockLandscape() {
+            try {
+                if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+            } catch (err) {}
+        }
+
         function startGame() {
             document.getElementById('blocker').style.display = 'none';
             if (!isMobile) {
                 controls.lock();
             } else {
+                try {
+                    const el = document.documentElement;
+                    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+                    if (req) {
+                        const r = req.call(el);
+                        if (r && r.then) r.then(lockLandscape).catch(() => {});
+                        else lockLandscape();
+                    } else lockLandscape();
+                } catch (err) {}
                 document.getElementById('joystick-zone').style.display = 'grid';
                 document.getElementById('mobile-buttons').style.display = 'flex';
             }
