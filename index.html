@@ -9,7 +9,7 @@
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; touch-action: none; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Minecraft', 'Courier New', Courier, monospace; }
-        #game-container { width: 100vw; height: 100vh; position: relative; }
+        #game-container { width: 100%; height: 100%; height: 100dvh; position: relative; }
         
         /* Crosshair */
         #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; transform: translate(-50%, -50%); pointer-events: none; z-index: 5; }
@@ -18,7 +18,7 @@
         #crosshair::after { left: 0; top: 7px; width: 16px; height: 2px; }
         
         /* Flash Overlays */
-        #flash-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(255, 255, 255, 0); pointer-events: none; z-index: 4; transition: background 0.05s ease-out; }
+        #flash-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0); pointer-events: none; z-index: 4; transition: background 0.05s ease-out; }
         
         /* Totem Pop Overlay */
         #totem-pop-overlay {
@@ -30,7 +30,7 @@
 
         /* Death Screen Overlay */
         #death-screen {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(120, 0, 0, 0.4); display: none; flex-direction: column;
             justify-content: center; align-items: center; z-index: 40; pointer-events: auto;
         }
@@ -129,7 +129,7 @@
         body.is-mobile #action-text { top: 45%; font-size: 13px; }
         body.is-mobile #mc-logo { font-size: 20px; margin-bottom: 10px; }
         body.is-mobile #blocker { overflow-y: auto; justify-content: flex-start; padding: 10px 0; }
-        #rotate-overlay { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: #111; color: #fff; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 18px; font-weight: bold; }
+        #rotate-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #111; color: #fff; z-index: 100; display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center; font-size: 18px; font-weight: bold; }
         @media (orientation: portrait) { body.is-mobile #rotate-overlay { display: flex; } }
 
         /* Mobile Controls Overlays */
@@ -144,9 +144,20 @@
         /* Action Text Overlay */
         #action-text { position: absolute; top: 60%; left: 50%; transform: translateX(-50%); color: #ffeb3b; font-size: 16px; font-weight: bold; text-shadow: 2px 2px #000; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
 
+        /* Coordinates display (top-left corner) */
+        #coords-hud { position: absolute; top: 10px; left: 14px; color: #fff; font-weight: bold; font-size: 14px; text-shadow: 2px 2px #000; background: rgba(0, 0, 0, 0.35); padding: 4px 8px; border-radius: 4px; z-index: 6; display: none; pointer-events: none; }
+        body.is-mobile #coords-hud { font-size: 11px; padding: 3px 6px; }
+
+        /* Arrow pointing to the arena center (top-center) */
+        #arena-arrow { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; z-index: 6; pointer-events: none; color: #ffeb3b; font-weight: bold; text-shadow: 2px 2px #000; }
+        #arena-arrow-icon { font-size: 30px; line-height: 30px; transition: transform 0.05s linear; }
+        #arena-arrow-dist { font-size: 12px; margin-top: 2px; }
+        body.is-mobile #arena-arrow-icon { font-size: 22px; line-height: 22px; }
+        body.is-mobile #arena-arrow-dist { font-size: 10px; }
+
         /* Minecraft Style Menu Blocker */
         #blocker {
-            position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), repeating-linear-gradient(45deg, #2b2b2b 0, #2b2b2b 10px, #222 10px, #222 20px);
             display: flex; flex-direction: column; justify-content: center; align-items: center;
             color: #fff; z-index: 30; font-family: 'Minecraft', 'Courier New', Courier, monospace;
@@ -216,6 +227,13 @@
             #mc-menu > .mc-btn, #mc-menu > input, #mc-menu > .mc-row { grid-column: 2; margin-top: 0 !important; }
             .mc-btn { padding: 8px; }
         }
+
+        /* Short phone screens (e.g. Samsung Galaxy A04s landscape): lift controls up */
+        @media (max-height: 460px) {
+            #joystick-zone, #mobile-buttons { bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+            body.is-mobile #hud { bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+            #joystick-zone, #mobile-buttons { z-index: 9; }
+        }
     </style>
     <!-- Three.js, PointerLockControls & PeerJS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -226,6 +244,9 @@
     <div id="game-container">
         <div id="rotate-overlay"><div style="font-size:48px;">⟳</div><div>Rotate your phone<br>to play (landscape)</div></div>
         <div id="crosshair"></div>
+        <div id="coords-hud">XYZ: 0.0 / 0.0 / 0.0</div>
+        <div id="arena-arrow"><div id="arena-arrow-icon">▲</div><div id="arena-arrow-dist">ARENA 0m</div></div>
+        <div id="speed-hud" style="position:absolute;top:10px;right:14px;color:#fff;font-weight:bold;font-size:14px;text-shadow:2px 2px #000;z-index:6;display:none;pointer-events:none;">SPEED 0</div>
         <div id="flash-overlay"></div>
         <div id="totem-pop-overlay">🗿</div>
         <div id="action-text">Arena Floor Setting Updated!</div>
@@ -509,7 +530,21 @@
                     }
                 }
             }
+            restockHotbar();
             updateInventoryUI();
+        }
+
+        function restockHotbar() {
+            for (let i = 0; i < hotbarData.length; i++) {
+                const slot = hotbarData[i];
+                if (!slot || typeof slot.count !== 'number' || slot.count > 0) continue;
+                const idx = inventoryData.findIndex(it => it && it.type === slot.type && typeof it.count === 'number' && it.count > 0);
+                if (idx > -1) {
+                    slot.count = inventoryData[idx].count;
+                    inventoryData[idx] = null;
+                    showActionText("Restocked from inventory!");
+                }
+            }
         }
 
         function refillAllItems() {
@@ -733,6 +768,7 @@
 
         function startGame() {
             document.getElementById('blocker').style.display = 'none';
+            document.getElementById('coords-hud').style.display = 'block';
             if (!isMobile) {
                 controls.lock();
             } else {
@@ -802,6 +838,7 @@
             // Hide Game UIs and show Menu Screen
             document.getElementById('death-screen').style.display = 'none';
             document.getElementById('inventory-screen').style.display = 'none';
+            document.getElementById('coords-hud').style.display = 'none';
             if (isMobile) {
                 document.getElementById('joystick-zone').style.display = 'none';
                 document.getElementById('mobile-buttons').style.display = 'none';
@@ -1611,12 +1648,14 @@
             });
         }
 
-        let glideSpeed = 14;
+        let glideSpeed = 14, glideTarget = 14;
+        const GLIDE_ACCEL = 40; // speed gained per second (lower = slower build-up)
         function startGlide() {
             if (isGliding) return;
             if (controls.getObject().position.y < 0.5 + PLAYER_EYE_HEIGHT + 0.8) return;
             isGliding = true;
             glideSpeed = Math.max(14, Math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z));
+            glideTarget = glideSpeed;
             showActionText("Elytra opened! Use fireworks to boost");
             playSound('place');
         }
@@ -1847,9 +1886,9 @@
             counts.firework--;
             playSound('firework');
 
-            glideSpeed = Math.min(60, glideSpeed + 22);
+            glideTarget = Math.min(1000, glideTarget + 60);
             spawnParticleExplosion(camera.position.clone().add(new THREE.Vector3(0, -0.6, 0)));
-            showActionText("Firework boost! Speed " + Math.round(glideSpeed));
+            showActionText("Firework boost! Building to " + Math.round(glideTarget));
         }
 
         function handleLeftClick() {
@@ -2061,6 +2100,7 @@
 
             if (controls.isLocked || isMobile) {
                 if (!isGliding) {
+                    const sh0 = document.getElementById('speed-hud'); if (sh0) sh0.style.display = 'none';
                     velocity.x -= velocity.x * 10.0 * delta;
                     velocity.z -= velocity.z * 10.0 * delta;
                     velocity.y -= 28.0 * delta;
@@ -2068,9 +2108,19 @@
                     // Elytra: fly toward where you look; diving builds speed, climbing bleeds it
                     const look = new THREE.Vector3();
                     camera.getWorldDirection(look);
-                    if (look.y < 0) glideSpeed = Math.min(40, glideSpeed + (-look.y) * 18.0 * delta);
-                    else glideSpeed = Math.max(10, glideSpeed - look.y * 14.0 * delta);
-                    if (glideSpeed > 18) glideSpeed = Math.max(18, glideSpeed - 3.0 * delta);
+                    // glideTarget = speed you're building toward; glideSpeed climbs to it slowly
+                    if (look.y < 0) glideTarget += (-look.y) * 18.0 * delta;
+                    else glideTarget -= look.y * 14.0 * delta;
+                    if (glideTarget > 18) glideTarget = Math.max(18, glideTarget - 3.0 * delta);
+                    glideTarget = Math.max(10, Math.min(1000, glideTarget));
+
+                    const diff = glideTarget - glideSpeed;
+                    if (diff > 0) glideSpeed += Math.min(diff, GLIDE_ACCEL * delta);
+                    else glideSpeed += Math.max(diff, -GLIDE_ACCEL * delta);
+                    glideSpeed = Math.max(10, Math.min(1000, glideSpeed));
+
+                    const sh = document.getElementById('speed-hud');
+                    if (sh) { sh.style.display = 'block'; sh.innerText = 'SPEED ' + Math.round(glideSpeed) + ' / ' + Math.round(glideTarget); }
 
                     const target = look.multiplyScalar(glideSpeed);
                     target.y -= 1.5;
@@ -2212,6 +2262,33 @@
                     scene.remove(p.mesh);
                     particleSystems.splice(i, 1);
                 }
+            }
+
+            // Arrow pointing to the arena center
+            const arrowBox = document.getElementById('arena-arrow');
+            const coordsBox = document.getElementById('coords-hud');
+            if (arrowBox && coordsBox) {
+                arrowBox.style.display = (coordsBox.style.display === 'block') ? 'flex' : 'none';
+                const fwd = new THREE.Vector3();
+                camera.getWorldDirection(fwd);
+                fwd.y = 0;
+                if (fwd.lengthSq() < 1e-6) fwd.set(0, 0, -1);
+                fwd.normalize();
+                const toX = -camera.position.x, toZ = -camera.position.z;
+                const forwardPart = toX * fwd.x + toZ * fwd.z;
+                const rightPart = toX * (-fwd.z) + toZ * fwd.x;
+                const angleDeg = Math.atan2(rightPart, forwardPart) * 180 / Math.PI;
+                const icon = document.getElementById('arena-arrow-icon');
+                if (icon) icon.style.transform = 'rotate(' + angleDeg.toFixed(1) + 'deg)';
+                const distEl = document.getElementById('arena-arrow-dist');
+                if (distEl) distEl.innerText = 'ARENA ' + Math.round(Math.sqrt(toX * toX + toZ * toZ)) + 'm';
+            }
+
+            // Update coordinates display (top-left corner)
+            const coordsEl = document.getElementById('coords-hud');
+            if (coordsEl) {
+                const cp = camera.position;
+                coordsEl.innerText = 'XYZ: ' + cp.x.toFixed(1) + ' / ' + cp.y.toFixed(1) + ' / ' + cp.z.toFixed(1);
             }
 
             renderer.render(scene, camera);
